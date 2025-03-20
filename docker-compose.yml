@@ -1,0 +1,56 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "1781:1781"
+    environment:
+      MS_API_CONFIG_PATH: /app/config/test/config.yml #TODO как то прокинуть тест/прод
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      YAS3_KEY: ${YAS3_KEY}
+      YAS3_SECRET: ${YAS3_SECRET}
+      SECRET_AUTH: ${SECRET_AUTH}
+      INVITE_TOKEN: ${INVITE_TOKEN}
+      AWS_REGION: "ru-central1"
+    volumes:
+      - ./container/media:/app/media
+      - ./logs:/app/logs
+
+
+  database:
+    hostname: database
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+        POSTGRES_USER: ${DB_USER}
+        POSTGRES_PASSWORD: ${DB_PASS}
+        POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  test:
+    build:
+      context: .
+      dockerfile: ./cmd/test/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./container/media:/app/media
+      - ./logs:/app/logs
+
+  test_database:
+    hostname: databasetest
+    image: postgres:16
+    ports:
+      - "5777:5432"
+    environment:
+        POSTGRES_USER: user
+        POSTGRES_PASSWORD: test
+        POSTGRES_DB: test_db
+
+volumes:
+  db:
