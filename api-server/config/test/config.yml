@@ -1,0 +1,8 @@
+server:
+  port: 1781
+  timeout: 4s
+database:
+  host: database
+  port: 5432
+s3:
+  bucket: meme-search-local

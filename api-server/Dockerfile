@@ -1,8 +1,8 @@
-FROM golang:1.22.5-alpine3.20 AS builder
+FROM golang:1.24.0-alpine3.20 AS builder
 WORKDIR /app
 COPY go.mod go.sum /app/
 RUN go mod download
-COPY cmd/meme-search/main.go ./cmd/app/main.go
+COPY cmd/apiserver ./cmd/app
 COPY internal ./internal
 
 ENV GOCACHE=/root/.cache/go-build

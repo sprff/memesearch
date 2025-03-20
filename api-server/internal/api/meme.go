@@ -20,7 +20,7 @@ func (a *API) CreateMeme(ctx context.Context, meme models.Meme) (models.MemeID, 
 	return id, nil
 }
 
-func (a *API) GetMeme(ctx context.Context, id models.MemeID) (models.Meme, ApiError) {
+func (a *API) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, ApiError) {
 	logger := slog.Default().With("from", "API.GetMeme")
 	logger.InfoContext(ctx, "Started")
 
