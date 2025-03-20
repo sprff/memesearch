@@ -26,7 +26,7 @@ func PostMeme() handlerWithError {
 			meme.Descriptions = map[string]string{}
 		}
 
-		logger.Debug("Read meme", "meme", meme)
+		logger.Debug("Body read", "meme", meme)
 
 		id, err := a.CreateMeme(ctx, meme)
 		if err != nil {
@@ -40,14 +40,59 @@ func PostMeme() handlerWithError {
 func GetMemeByID() handlerWithError {
 	return func(w http.ResponseWriter, r *http.Request, ctx context.Context, a *apiservice.API) (any, error) {
 		logger := slog.Default().With("from", "Server.GetMemeByID")
-		id := chi.URLParam(r, "id")
+		id := models.MemeID(chi.URLParam(r, "id"))
 		logger.InfoContext(ctx, "Started", "id", id)
 
-		meme, err := a.GetMemeByID(ctx, models.MemeID(id))
+		meme, err := a.GetMemeByID(ctx, id)
 		if err != nil {
 			return nil, fmt.Errorf("can't get meme: %w", err)
 		}
 
 		return meme, nil
+	}
+}
+
+func PutMeme() handlerWithError {
+	return func(w http.ResponseWriter, r *http.Request, ctx context.Context, a *apiservice.API) (any, error) {
+		logger := slog.Default().With("from", "Server.PutMeme")
+		id := models.MemeID(chi.URLParam(r, "id"))
+		logger.InfoContext(ctx, "Started", "id", id)
+
+		var meme models.Meme
+		err := readBody(r, &meme)
+		if err != nil {
+			return nil, fmt.Errorf("can't read body: %w", err)
+		}
+
+		if meme.Descriptions == nil {
+			meme.Descriptions = map[string]string{}
+		}
+		meme.ID = id
+
+		logger.Debug("Body read", "meme", meme)
+
+		err = a.UpdateMeme(ctx, meme)
+		if err != nil {
+			return nil, fmt.Errorf("can't get meme: %w", err)
+		}
+
+		return meme, nil
+	}
+}
+
+func DeleteMeme() handlerWithError {
+	return func(w http.ResponseWriter, r *http.Request, ctx context.Context, a *apiservice.API) (any, error) {
+		logger := slog.Default().With("from", "Server.DeleteMeme")
+		id := models.MemeID(chi.URLParam(r, "id"))
+		logger.InfoContext(ctx, "Started", "id", id)
+
+		err := a.DeleteMeme(ctx, id)
+		if err != nil {
+			if err == models.ErrMemeNotFound {
+				return map[string]any{"ok": false}, nil
+			}
+			return nil, fmt.Errorf("can't get meme: %w", err)
+		}
+		return map[string]any{"ok": true}, nil
 	}
 }

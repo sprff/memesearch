@@ -28,7 +28,8 @@ func GetRouter(api *apiservice.API, cfg config.ServerConfig) *chi.Mux {
 
 	router.Post("/memes", handlerWrapper(PostMeme(), api))
 	router.Get("/memes/{id}", handlerWrapper(GetMemeByID(), api))
-	// router.Put("/memes/{id}")
+	router.Put("/memes/{id}", handlerWrapper(PutMeme(), api))
+	router.Delete("/memes/{id}", handlerWrapper(DeleteMeme(), api))
 
 	// router.Put("/media")
 	// router.Get("/media")
@@ -68,7 +69,7 @@ func handlerWrapper(handle handlerWithError, a *apiservice.API) http.HandlerFunc
 			return
 		}
 		render.JSON(w, r, httpAnswer{
-			Status: "ok",
+			Status: "OK",
 			Data:   res,
 		})
 
