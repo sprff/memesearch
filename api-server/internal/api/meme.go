@@ -1,0 +1,66 @@
+package api
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"memesearch/internal/models"
+)
+
+func (a *API) CreateMeme(ctx context.Context, meme models.Meme) (models.MemeID, ApiError) {
+	logger := slog.Default().With("from", "API.CreateMeme")
+	logger.InfoContext(ctx, "Started")
+
+	id, err := a.storage.InsertMeme(ctx, meme)
+	if err != nil {
+		return "", ErrUnexpectedError{fmt.Errorf("can't create meme: %w", err)}
+	}
+	logger.DebugContext(ctx, "Meme inserted", "id", id)
+	return id, nil
+}
+
+func (a *API) GetMeme(ctx context.Context, id models.MemeID) (models.Meme, ApiError) {
+	logger := slog.Default().With("from", "API.GetMeme")
+	logger.InfoContext(ctx, "Started")
+
+	meme, err := a.storage.GetMemeByID(ctx, id)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrMemeNotFound):
+			return models.Meme{}, ErrMemeNotFound{}
+		default:
+			return models.Meme{}, ErrUnexpectedError{fmt.Errorf("can't get meme: %w", err)}
+		}
+	}
+	return meme, nil
+}
+
+func (a *API) UpdateMeme(ctx context.Context, meme models.Meme) ApiError {
+	logger := slog.Default().With("from", "API.UpdateMeme")
+	logger.InfoContext(ctx, "Started")
+
+	err := a.storage.UpdateMeme(ctx, meme)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrMemeNotFound):
+			return ErrMemeNotFound{}
+		default:
+			return ErrUnexpectedError{fmt.Errorf("can't update meme: %w", err)}
+		}
+	}
+	return nil
+}
+
+func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) ApiError {
+	logger := slog.Default().With("from", "API.DeleteMeme")
+	logger.InfoContext(ctx, "Started")
+
+	err := a.storage.DeleteMeme(ctx, id)
+	switch {
+	case errors.Is(err, models.ErrMemeNotFound):
+		return ErrMemeNotFound{}
+	default:
+		return ErrUnexpectedError{fmt.Errorf("can't delete meme: %w", err)}
+	}
+}
