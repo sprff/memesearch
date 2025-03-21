@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"context"
 	apiservice "memesearch/internal/api"
 	"net/http"
 
@@ -18,13 +17,13 @@ func GetRouter(api *apiservice.API) *chi.Mux {
 
 	router.Get("/about", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("t.me/sprff_code")) })
 
-	router.Post("/memes", handlerWrapper(PostMeme(), api))
-	router.Get("/memes/{id}", handlerWrapper(GetMemeByID(), api))
-	router.Put("/memes/{id}", handlerWrapper(PutMeme(), api))
-	router.Delete("/memes/{id}", handlerWrapper(DeleteMeme(), api))
+	router.Post("/memes", PostMeme(api))
+	router.Get("/memes/{id}", GetMemeByID(api))
+	router.Put("/memes/{id}", PutMeme(api))
+	router.Delete("/memes/{id}", DeleteMeme(api))
 
-	router.Put("/media/{id}", PutMedia(context.TODO(), api))
-	router.Get("/media/{id}", GetMedia(context.TODO(), api))
+	router.Put("/media/{id}", PutMedia(api))
+	router.Get("/media/{id}", GetMedia(api))
 
 	// router.Post("/board")
 

@@ -149,10 +149,25 @@ func TestServer(t *testing.T) {
 	})
 }
 
+func TestServer_invalidInput(t *testing.T) {
+	ts := getTestServer(t)
+	t.Run("POST /memes", func(t *testing.T) {
+		_, resp, err := makeJSONReqest("POST", fmt.Sprintf("%s/memes", ts.URL), nil)
+		assert.NoError(t, err)
+		require.Equal(t, "INVALID_INPUT", resp["status"])
+		data := resp["err_data"].(map[string]any)
+		assert.Equal(t, "body", data["reason"].(string))
+	})
+}
+
 func makeJSONReqest(method string, url string, body any) (int, map[string]any, error) {
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return 0, nil, fmt.Errorf("can't marshal body: %w", err)
+	var bodyBytes []byte
+	var err error
+	if body != nil {
+		bodyBytes, err = json.Marshal(body)
+		if err != nil {
+			return 0, nil, fmt.Errorf("can't marshal body: %w", err)
+		}
 	}
 	bodyReader := bytes.NewBuffer(bodyBytes)
 	request, err := http.NewRequest(method, url, bodyReader)

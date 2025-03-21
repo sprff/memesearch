@@ -8,7 +8,7 @@ import (
 	"memesearch/internal/models"
 )
 
-func (a *API) GetMedia(ctx context.Context, id models.MediaID) (models.Media, ApiError) {
+func (a *API) GetMedia(ctx context.Context, id models.MediaID) (models.Media, error) {
 	logger := slog.Default().With("from", "API.GetMedia")
 	logger.InfoContext(ctx, "Started", "id", id)
 
@@ -16,22 +16,22 @@ func (a *API) GetMedia(ctx context.Context, id models.MediaID) (models.Media, Ap
 	if err != nil {
 		switch {
 		case errors.Is(err, models.ErrMediaNotFound):
-			return models.Media{}, ErrMediaNotFound{}
+			return models.Media{}, ErrMediaNotFound
 		default:
-			return models.Media{}, ErrUnexpectedError{fmt.Errorf("can't get media: %w", err)}
+			return models.Media{}, fmt.Errorf("can't get media: %w", err)
 		}
 	}
 
 	return media, nil
 }
 
-func (a *API) SetMedia(ctx context.Context, media models.Media) ApiError {
+func (a *API) SetMedia(ctx context.Context, media models.Media) error {
 	logger := slog.Default().With("from", "API.SetMedia")
 	logger.InfoContext(ctx, "Started", "id", media.ID)
 
 	err := a.storage.SetMediaByID(ctx, media)
 	if err != nil {
-		return ErrUnexpectedError{fmt.Errorf("can't set media: %w", err)}
+		return fmt.Errorf("can't set media: %w", err)
 	}
 
 	return nil
