@@ -22,7 +22,7 @@ func (a *API) CreateMeme(ctx context.Context, meme models.Meme) (models.MemeID, 
 
 func (a *API) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, ApiError) {
 	logger := slog.Default().With("from", "API.GetMeme")
-	logger.InfoContext(ctx, "Started")
+	logger.InfoContext(ctx, "Started", "id", id)
 
 	meme, err := a.storage.GetMemeByID(ctx, id)
 	if err != nil {
@@ -38,7 +38,7 @@ func (a *API) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, A
 
 func (a *API) UpdateMeme(ctx context.Context, meme models.Meme) ApiError {
 	logger := slog.Default().With("from", "API.UpdateMeme")
-	logger.InfoContext(ctx, "Started")
+	logger.InfoContext(ctx, "Started", "id", meme.ID)
 
 	err := a.storage.UpdateMeme(ctx, meme)
 	if err != nil {
@@ -54,7 +54,7 @@ func (a *API) UpdateMeme(ctx context.Context, meme models.Meme) ApiError {
 
 func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) ApiError {
 	logger := slog.Default().With("from", "API.DeleteMeme")
-	logger.InfoContext(ctx, "Started")
+	logger.InfoContext(ctx, "Started", "id", id)
 
 	err := a.storage.DeleteMeme(ctx, id)
 	switch {

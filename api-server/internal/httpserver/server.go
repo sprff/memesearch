@@ -31,8 +31,8 @@ func GetRouter(api *apiservice.API, cfg config.ServerConfig) *chi.Mux {
 	router.Put("/memes/{id}", handlerWrapper(PutMeme(), api))
 	router.Delete("/memes/{id}", handlerWrapper(DeleteMeme(), api))
 
-	// router.Put("/media")
-	// router.Get("/media")
+	router.Put("/media/{id}", PutMedia(context.TODO(), api))
+	router.Get("/media/{id}", GetMedia(context.TODO(), api))
 
 	// router.Post("/board")
 

@@ -1,7 +1,6 @@
 package psql
 
 import (
-	"bytes"
 	"context"
 	"memesearch/internal/config"
 	"memesearch/internal/models"
@@ -97,7 +96,7 @@ func TestMedia(t *testing.T) {
 	})
 
 	t.Run("Clean", func(t *testing.T) {
-		err = store.SetMediaByID(ctx, models.Media{ID: "_test_id2", Body: bytes.NewBuffer([]byte{})})
+		err = store.SetMediaByID(ctx, models.Media{ID: "_test_id2", Body: []byte{}})
 		require.NoError(t, err)
 	})
 }

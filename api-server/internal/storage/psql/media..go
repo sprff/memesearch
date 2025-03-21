@@ -1,7 +1,6 @@
 package psql
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"memesearch/internal/config"
@@ -24,28 +23,22 @@ func NewMediaStore(cfg config.DatabaseConfig) (MediaStore, error) {
 	return MediaStore{db: db}, nil
 }
 
-type mediaBin struct {
-	ID   models.MediaID `db:"id"`
-	Body []byte         `db:"body"`
-}
-
 // GetMediaByID implements models.MediaRepo.
 func (m *MediaStore) GetMediaByID(ctx context.Context, id models.MediaID) (models.Media, error) {
 
-	med := mediaBin{}
+	med := models.Media{}
 	err := m.db.Get(&med, "SELECT * FROM medias WHERE id=$1", id)
 	if err != nil {
 		return models.Media{}, fmt.Errorf("can't select: %w", err)
 	}
-	return models.Media{ID: med.ID, Body: bytes.NewBuffer(med.Body)}, nil
+	return med, nil
 
 }
 
 // SetMediaByID implements models.MediaRepo.
 func (m *MediaStore) SetMediaByID(ctx context.Context, media models.Media) error {
-	med := mediaBin{ID: media.ID, Body: media.Body.Bytes()}
 	_, err := m.db.Exec(`INSERT INTO medias (id, body) VALUES ($1, $2)
-	ON CONFLICT (id) DO UPDATE SET  body=$2`, med.ID, med.Body)
+	ON CONFLICT (id) DO UPDATE SET  body=$2`, media.ID, media.Body)
 	if err != nil {
 		return fmt.Errorf("can't insert: %w", err)
 	}

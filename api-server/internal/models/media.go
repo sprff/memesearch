@@ -1,7 +1,6 @@
 package models
 
 import (
-	"bytes"
 	"context"
 	"errors"
 )
@@ -10,7 +9,7 @@ type MediaID MemeID
 
 type Media struct {
 	ID   MediaID `json:"id"`
-	Body *bytes.Buffer
+	Body []byte  `json:"body"`
 }
 
 type MediaRepo interface {
