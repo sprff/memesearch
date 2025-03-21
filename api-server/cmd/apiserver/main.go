@@ -16,6 +16,7 @@ func main() {
 	cfg := getConfig()
 	server, err := httpserver.New(cfg)
 	processError("Failed to create server", err)
+	slog.Info("Run server", "port", cfg.Server.Port)
 	http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port), server)
 	slog.Info("Server stopped")
 }

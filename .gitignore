@@ -3,4 +3,4 @@
 **/*.secret
 **/*.secrets*
 /container
-/logs
+api-server/logs
