@@ -8,7 +8,6 @@ import (
 	"memesearch/internal/contextlogger"
 	"memesearch/internal/httpserver"
 	"memesearch/internal/storage"
-	"memesearch/internal/storage/psql"
 	"net/http"
 	"os"
 	"time"
@@ -18,9 +17,10 @@ func main() {
 	setLogger()
 
 	cfg := getConfig()
-	storage := getStorage(cfg)
+	storage, err := storage.New(cfg)
+	processError("Failed to create storeage", err)
 	api := api.New(storage, cfg.Secrets)
-	router := httpserver.GetRouter(api, cfg.Server)
+	router := httpserver.GetRouter(api)
 
 	slog.Info("Server started",
 		slog.Int("Port", cfg.Server.Port),
@@ -34,7 +34,7 @@ func main() {
 		IdleTimeout:  cfg.Server.Timeout,
 	}
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	processError("Failed to start server", err)
 	slog.Info("Server stopped")
 }
@@ -55,24 +55,6 @@ func getConfig() config.Config {
 	cfg, err := config.LoadConfig(configPath)
 	processError("Сan't load config", err)
 	return cfg
-}
-
-func getStorage(cfg config.Config) storage.Storage {
-	board, err := psql.NewBoardStore(cfg.Database)
-	processError("can't load board store", err)
-	user, err := psql.NewUserStore(cfg.Database)
-	processError("can't load user store", err)
-	meme, err := psql.NewMemeStore(cfg.Database)
-	processError("can't load meme store", err)
-	media, err := psql.NewMediaStore(cfg.Database)
-	processError("can't load media store", err)
-
-	return storage.Storage{
-		BoardRepo: &board,
-		UserRepo:  &user,
-		MemeRepo:  &meme,
-		MediaRepo: &media,
-	}
 }
 
 func processError(msg string, err error) {

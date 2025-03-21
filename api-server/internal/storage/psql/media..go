@@ -16,12 +16,12 @@ type MediaStore struct {
 	db *sqlx.DB
 }
 
-func NewMediaStore(cfg config.DatabaseConfig) (MediaStore, error) {
+func NewMediaStore(cfg config.DatabaseConfig) (*MediaStore, error) {
 	db, err := connect(cfg)
 	if err != nil {
-		return MediaStore{}, err
+		return nil, err
 	}
-	return MediaStore{db: db}, nil
+	return &MediaStore{db: db}, nil
 }
 
 // GetMediaByID implements models.MediaRepo.

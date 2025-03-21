@@ -17,12 +17,12 @@ type BoardStore struct {
 	db *sqlx.DB
 }
 
-func NewBoardStore(cfg config.DatabaseConfig) (BoardStore, error) {
+func NewBoardStore(cfg config.DatabaseConfig) (*BoardStore, error) {
 	db, err := connect(cfg)
 	if err != nil {
-		return BoardStore{}, err
+		return nil, err
 	}
-	return BoardStore{db: db}, nil
+	return &BoardStore{db: db}, nil
 }
 
 // GetBoardByID implements models.BoardRepo.

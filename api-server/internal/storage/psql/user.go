@@ -14,12 +14,12 @@ type UserStore struct {
 	db *sqlx.DB
 }
 
-func NewUserStore(cfg config.DatabaseConfig) (UserStore, error) {
+func NewUserStore(cfg config.DatabaseConfig) (*UserStore, error) {
 	db, err := connect(cfg)
 	if err != nil {
-		return UserStore{}, err
+		return nil, err
 	}
-	return UserStore{db: db}, nil
+	return &UserStore{db: db}, nil
 }
 
 // InsertUser implements models.UserRepo.

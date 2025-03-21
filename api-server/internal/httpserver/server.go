@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	apiservice "memesearch/internal/api"
-	"memesearch/internal/config"
 	"memesearch/internal/contextlogger"
 	"memesearch/internal/utils"
 	"net/http"
@@ -17,7 +16,7 @@ import (
 	"github.com/go-chi/render"
 )
 
-func GetRouter(api *apiservice.API, cfg config.ServerConfig) *chi.Mux {
+func GetRouter(api *apiservice.API) *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)

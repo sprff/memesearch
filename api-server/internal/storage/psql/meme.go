@@ -17,12 +17,12 @@ type MemeStore struct {
 	db *sqlx.DB
 }
 
-func NewMemeStore(cfg config.DatabaseConfig) (MemeStore, error) {
+func NewMemeStore(cfg config.DatabaseConfig) (*MemeStore, error) {
 	db, err := connect(cfg)
 	if err != nil {
-		return MemeStore{}, err
+		return nil, err
 	}
-	return MemeStore{db: db}, nil
+	return &MemeStore{db: db}, nil
 }
 
 // InsertMeme implements models.MemeRepo.
