@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS memes
     id VARCHAR(63) PRIMARY KEY,
     board_id VARCHAR(63),
     filename TEXT,
-    descriptions BYTEA
+    descriptions TEXT
 );
 
 CREATE TABLE IF NOT EXISTS boards
@@ -26,6 +26,6 @@ CREATE TABLE IF NOT EXISTS medias
 (
     id VARCHAR(63) PRIMARY KEY,
     body BYTEA
-)
+);
 
 COMMIT;

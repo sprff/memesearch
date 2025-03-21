@@ -17,7 +17,7 @@ func getConfig() config.DatabaseConfig {
 		Port:     5432,
 		User:     "user",
 		Password: "password",
-		Dbname:   "meme-search-local",
+		Dbname:   "meme-search-test",
 	}
 }
 
