@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"memesearch/internal/api"
 	"memesearch/internal/config"
 	"memesearch/internal/contextlogger"
 	"memesearch/internal/httpserver"
-	"memesearch/internal/storage"
 	"net/http"
 	"os"
 	"time"
@@ -15,27 +13,10 @@ import (
 
 func main() {
 	setLogger()
-
 	cfg := getConfig()
-	storage, err := storage.New(cfg)
-	processError("Failed to create storeage", err)
-	api := api.New(storage, cfg.Secrets)
-	router := httpserver.GetRouter(api)
-
-	slog.Info("Server started",
-		slog.Int("Port", cfg.Server.Port),
-	)
-
-	srv := &http.Server{
-		Addr:         fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port),
-		Handler:      router,
-		ReadTimeout:  cfg.Server.Timeout,
-		WriteTimeout: cfg.Server.Timeout,
-		IdleTimeout:  cfg.Server.Timeout,
-	}
-
-	err = srv.ListenAndServe()
-	processError("Failed to start server", err)
+	server, err := httpserver.New(cfg)
+	processError("Failed to create server", err)
+	http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port), server)
 	slog.Info("Server stopped")
 }
 
