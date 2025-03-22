@@ -1,6 +1,25 @@
 # TODO list
 ## Api
+ - [ ] Разное
+   - [ ] Добавить createdt updatedt к мемам
+
  - [x] Сделать Repo под каждый тип объектов
+   - [x] Create meme
+   - [x] Get meme
+   - [x] Update meme
+   - [x] Delete meme
+   - [ ] List memes
+   - [x] Set media
+   - [x] Get media
+   - [x] Create board
+   - [x] Get board
+   - [x] Update board
+   - [x] Delete board
+   - [ ] Create user
+   - [ ] Get user
+   - [ ] Update user
+   - [ ] Delete user
+
  - [ ] Сделать хендлеры
    - [x] POST "/memes" - создать мем (без медиа)
    - [x] PUT "/memes/{id}" - перезаписать мем
