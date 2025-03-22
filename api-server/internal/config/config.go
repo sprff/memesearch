@@ -44,3 +44,27 @@ func LoadConfig(path string) (Config, error) {
 	err := cleanenv.ReadConfig(path, &cfg)
 	return cfg, err
 }
+
+// type Config struct {
+// 	Server  ServerConfig
+// 	Storage StorageConfig
+// }
+
+// type ServerConfig struct {
+// 	Port int `yaml:"port"`
+// }
+
+// type StorageConfig struct {
+// 	MemeStore  PsqlConfig
+// 	BoardStore PsqlConfig
+// 	UserStore  PsqlConfig
+// 	MediaStore PsqlConfig
+// }
+
+// type PsqlConfig struct {
+// 	Host     string `yaml:"host"`
+// 	Port     int    `yaml:"port"`
+// 	User     string `env:"DB_USER" env-required:"true"`
+// 	Password string `env:"DB_PASS" env-required:"true"`
+// 	Dbname   string `env:"DB_NAME" env-required:"true"`
+// }

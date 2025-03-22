@@ -27,7 +27,7 @@ func GetRouter(api *apiservice.API) *chi.Mux {
 
 	// router.Post("/board")
 
-	// router.Get("/search/")
+	router.Get("/search/byboard/{id}", SearchByBoard(api))
 
 	return router
 }

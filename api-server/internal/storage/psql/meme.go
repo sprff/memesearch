@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"memesearch/internal/config"
 	"memesearch/internal/models"
 	"memesearch/internal/utils"
@@ -67,6 +68,7 @@ func (m *MemeStore) GetMemesByBoardID(ctx context.Context, id models.BoardID, of
 	if err != nil {
 		return []models.Meme{}, fmt.Errorf("can't select: %w", err)
 	}
+	slog.DebugContext(ctx, "select result", "mps", mps)
 	memes := make([]models.Meme, 0, len(mps))
 	for _, mp := range mps {
 		meme, err := convertPsqlMeme(mp)
@@ -76,6 +78,7 @@ func (m *MemeStore) GetMemesByBoardID(ctx context.Context, id models.BoardID, of
 		}
 		memes = append(memes, meme)
 	}
+	slog.DebugContext(ctx, "convert result", "memes", mps)
 
 	return memes, nil
 }
