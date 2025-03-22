@@ -11,11 +11,11 @@
    - [ ] GET "/search/{id}?subject=кот&text=якот" - поиск по доске ID, с запросом {"subject": "кот", "text": якот}
 
  - [ ] Тестирование
-   - [ ] POST "/memes"
-   - [ ] PUT "/memes/{id}"
-   - [ ] GET "/memes/{id}"
-   - [ ] PUT "/media/{id}"
-   - [ ] GET "/media/{id}"
+   - [x] POST "/memes"
+   - [x] PUT "/memes/{id}"
+   - [x] GET "/memes/{id}"
+   - [x] PUT "/media/{id}"
+   - [x] GET "/media/{id}"
    - [ ] POST "/board"
    - [ ] GET "/search/{id}?..."
 

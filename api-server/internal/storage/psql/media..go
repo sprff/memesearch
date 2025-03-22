@@ -43,9 +43,6 @@ func (m *MediaStore) GetMediaByID(ctx context.Context, id models.MediaID) (model
 func (m *MediaStore) SetMediaByID(ctx context.Context, media models.Media) error {
 	_, err := m.db.Exec(`INSERT INTO medias (id, body) VALUES ($1, $2)
 	ON CONFLICT (id) DO UPDATE SET  body=$2`, media.ID, media.Body)
-	if err == sql.ErrNoRows {
-		return models.ErrMediaNotFound
-	}
 	if err != nil {
 		return fmt.Errorf("can't insert: %w", err)
 	}
