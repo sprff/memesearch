@@ -54,6 +54,9 @@ func parseError(err error) httpError {
 	case errors.Is(err, apiservice.ErrUserNotFound):
 		h.RespCode = http.StatusNotFound
 		h.Status = "USER_NOT_FOUND"
+	case errors.Is(err, ErrMediaIsRequired):
+		h.RespCode = http.StatusNotFound
+		h.Status = "MEDIA_IS_REQUIRED"
 	case errors.As(err, &ii):
 		h.RespCode = http.StatusBadRequest
 		h.Status = "INVALID_INPUT"

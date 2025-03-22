@@ -152,11 +152,74 @@ func TestServer(t *testing.T) {
 func TestServer_invalidInput(t *testing.T) {
 	ts := getTestServer(t)
 	t.Run("POST /memes", func(t *testing.T) {
-		_, resp, err := makeJSONReqest("POST", fmt.Sprintf("%s/memes", ts.URL), nil)
-		assert.NoError(t, err)
-		require.Equal(t, "INVALID_INPUT", resp["status"])
-		data := resp["err_data"].(map[string]any)
-		assert.Equal(t, "body", data["reason"].(string))
+		t.Run("invalid body", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("POST", fmt.Sprintf("%s/memes", ts.URL), nil)
+			assert.NoError(t, err)
+			require.Equal(t, "INVALID_INPUT", resp["status"])
+			data := resp["err_data"].(map[string]any)
+			assert.Equal(t, "body", data["reason"].(string))
+		})
+		t.Run("wrong type of field", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("POST", fmt.Sprintf("%s/memes", ts.URL), map[string]any{"filename": 15})
+			assert.NoError(t, err)
+			require.Equal(t, "INVALID_INPUT", resp["status"])
+			data := resp["err_data"].(map[string]any)
+			assert.Equal(t, "filename expected to be string", data["reason"].(string))
+		})
+	})
+
+	t.Run("PUT /memes", func(t *testing.T) {
+		t.Run("not found", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("PUT", fmt.Sprintf("%s/memes/%s", ts.URL, "unknown_id"), map[string]any{})
+			assert.NoError(t, err)
+			require.Equal(t, "MEME_NOT_FOUND", resp["status"])
+		})
+		var id models.MemeID
+		t.Run("paste empty meme", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("POST", fmt.Sprintf("%s/memes", ts.URL), map[string]any{})
+			assert.NoError(t, err)
+			require.Equal(t, "OK", resp["status"])
+			data := resp["data"].(map[string]any)
+			id = models.MemeID(data["id"].(string))
+		})
+
+		t.Run("invalid body", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("PUT", fmt.Sprintf("%s/memes/%s", ts.URL, id), nil)
+			assert.NoError(t, err)
+			require.Equal(t, "INVALID_INPUT", resp["status"])
+			data := resp["err_data"].(map[string]any)
+			assert.Equal(t, "body", data["reason"].(string))
+		})
+		t.Run("wrong type of field", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("PUT", fmt.Sprintf("%s/memes/%s", ts.URL, id), map[string]any{"filename": 15})
+			assert.NoError(t, err)
+			require.Equal(t, "INVALID_INPUT", resp["status"])
+			data := resp["err_data"].(map[string]any)
+			assert.Equal(t, "filename expected to be string", data["reason"].(string))
+		})
+	})
+	t.Run("GET /memes", func(t *testing.T) {
+		t.Run("not found", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("GET", fmt.Sprintf("%s/memes/%s", ts.URL, "unknown_id"), map[string]any{})
+			assert.NoError(t, err)
+			require.Equal(t, "MEME_NOT_FOUND", resp["status"])
+		})
+	})
+
+	t.Run("GET /media", func(t *testing.T) {
+		t.Run("not found", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("GET", fmt.Sprintf("%s/media/%s", ts.URL, "unknown_id"), map[string]any{})
+			assert.NoError(t, err)
+			require.Equal(t, "MEDIA_NOT_FOUND", resp["status"])
+		})
+	})
+
+	t.Run("PUT /media", func(t *testing.T) {
+		t.Run("media file is required", func(t *testing.T) {
+			_, resp, err := makeJSONReqest("PUT", fmt.Sprintf("%s/media/%s", ts.URL, "some_id"), map[string]any{})
+			assert.NoError(t, err)
+			require.Equal(t, "MEDIA_IS_REQUIRED", resp["status"])
+		})
 	})
 }
 

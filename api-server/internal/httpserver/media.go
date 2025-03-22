@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,7 +11,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/render"
 )
 
 func GetMedia(a *apiservice.API) http.HandlerFunc {
@@ -42,8 +42,7 @@ func PutMedia(a *apiservice.API) http.HandlerFunc {
 
 		file, _, err := r.FormFile("media")
 		if err != nil {
-			logger.Error("MEDIA IS REQIURED")
-			render.JSON(w, r, map[string]any{"status": "MEDIA_IS_REQIURED", "data": map[string]any{}})
+			renderError(w, r, ErrMediaIsRequired)
 			return
 		}
 		body, err := io.ReadAll(file)
@@ -60,3 +59,5 @@ func PutMedia(a *apiservice.API) http.HandlerFunc {
 		renderOK(w, r, map[string]any{})
 	}
 }
+
+var ErrMediaIsRequired = errors.New("mediafile to set should be provided")
