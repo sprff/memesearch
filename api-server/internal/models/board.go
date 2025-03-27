@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"errors"
 )
 
 type BoardID string
@@ -19,5 +18,3 @@ type BoardRepo interface {
 	UpdateBoard(ctx context.Context, board Board) error
 	DeleteBoard(ctx context.Context, id BoardID) error
 }
-
-var ErrBoardNotFound = errors.New("Board not found")

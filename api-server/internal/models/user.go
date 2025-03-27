@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"errors"
 )
 
 type UserID string
@@ -20,6 +19,3 @@ type UserRepo interface {
 	UpdateUser(ctx context.Context, user User) error
 	DeleteUser(ctx context.Context, id UserID) error
 }
-
-var ErrUserNotFound = errors.New("User not found")
-var ErrUserLoginAlreadyExists = errors.New("User with this login already exists")

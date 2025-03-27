@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"errors"
 	"time"
 )
 
@@ -24,5 +23,3 @@ type MemeRepo interface {
 	UpdateMeme(ctx context.Context, meme Meme) error
 	DeleteMeme(ctx context.Context, id MemeID) error
 }
-
-var ErrMemeNotFound = errors.New("Meme not found")
