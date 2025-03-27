@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS memes
     id VARCHAR(63) PRIMARY KEY,
     board_id VARCHAR(63),
     filename TEXT,
-    descriptions TEXT
+    descriptions TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS boards

@@ -5,6 +5,7 @@ import (
 	"memesearch/internal/config"
 	"memesearch/internal/models"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -126,6 +127,8 @@ func TestMeme(t *testing.T) {
 	t.Run("Get meme", func(t *testing.T) {
 		nmeme, err := store.GetMemeByID(ctx, id)
 		require.NoError(t, err)
+		nmeme.CreatedAt = time.Time{}
+		nmeme.UpdatedAt = time.Time{}
 		assert.Equal(t, meme, nmeme)
 	})
 	t.Run("Get meme not exist", func(t *testing.T) {
@@ -139,6 +142,8 @@ func TestMeme(t *testing.T) {
 		require.NoError(t, err)
 		nmeme, err := store.GetMemeByID(ctx, id)
 		require.NoError(t, err)
+		nmeme.CreatedAt = time.Time{}
+		nmeme.UpdatedAt = time.Time{}
 		assert.Equal(t, meme, nmeme)
 	})
 	t.Run("Update meme not exist", func(t *testing.T) {

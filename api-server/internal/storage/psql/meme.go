@@ -33,7 +33,7 @@ func (m *MemeStore) InsertMeme(ctx context.Context, meme models.Meme) (models.Me
 	if err != nil {
 		return "", fmt.Errorf("can't convert: %w", err)
 	}
-	_, err = m.db.Exec("INSERT INTO memes (id, board_id, descriptions, filename) VALUES ($1, $2, $3, $4)", mp.ID, mp.BoardID, mp.Descriptions, mp.Filename)
+	_, err = m.db.Exec("INSERT INTO memes (id, board_id, descriptions, filename, created_at, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", mp.ID, mp.BoardID, mp.Descriptions, mp.Filename)
 	if err != nil {
 		return "", fmt.Errorf("can't insert: %w", err)
 	}
@@ -89,7 +89,7 @@ func (m *MemeStore) UpdateMeme(ctx context.Context, meme models.Meme) error {
 	if err != nil {
 		return fmt.Errorf("can't convert: %w", err)
 	}
-	res, err := m.db.Exec("UPDATE memes SET board_id = $2, descriptions = $3, filename = $4 WHERE id=$1", mp.ID, mp.BoardID, mp.Descriptions, mp.Filename)
+	res, err := m.db.Exec("UPDATE memes SET board_id = $2, descriptions = $3, filename = $4, updated_at=CURRENT_TIMESTAMP WHERE id=$1", mp.ID, mp.BoardID, mp.Descriptions, mp.Filename)
 	if err != nil {
 		return fmt.Errorf("can't update: %w", err)
 	}
