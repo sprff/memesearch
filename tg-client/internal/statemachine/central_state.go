@@ -55,8 +55,9 @@ func doSearchRequest(r RequestContext) {
 	slog.InfoContext(ctx, "doSearchRequest")
 	memes, err := r.ApiClient.SearchMemeByBoardID(ctx, "board", map[string]string{"general": text})
 	if err != nil {
-		slog.ErrorContext(ctx, "can't do serch request", "error", err.Error())
-		r.Bot.SendMessage(ctx, r.MustChat(), "can't do search request")
+		slog.ErrorContext(ctx, "can't do serch request",
+			"error", err.Error())
+		r.SendMessage("can't do search request")
 	}
 	sendMemes(memes, r)
 }
@@ -70,17 +71,20 @@ func sendMemes(memes []models.Meme, r RequestContext) {
 		if err != nil {
 			switch {
 			case errors.Is(err, models.ErrMediaNotFound):
-				r.Bot.SendError(ctx, r.MustChat(), "Meme don't have media")
-				slog.WarnContext(ctx, "meme don't have media", "id", meme.ID)
+				r.SendError("Meme don't have media")
+				slog.WarnContext(ctx, "meme don't have media",
+					"id", meme.ID)
 			default:
-				r.Bot.SendError(ctx, r.MustChat(), "Unexpected error")
-				slog.ErrorContext(ctx, "can't get media", "error", err.Error(), "id", meme.ID)
+				r.SendError("Unexpected error")
+				slog.ErrorContext(ctx, "can't get media",
+					"error", err.Error(),
+					"id", meme.ID)
 			}
 			continue
 		}
 		mges = append(mges, telegram.MediaGroupEntry{Filename: meme.Filename, Caption: caption, Body: media.Body})
 	}
-	r.Bot.SendMediaGroup(ctx, r.MustChat(), mges)
+	r.SendMediaGroup(mges)
 }
 
 func isInlineSearchRequest(r RequestContext) bool {
@@ -108,7 +112,6 @@ func isAddPhoto(r RequestContext) bool {
 	return true
 }
 
-
 func isAddVideo(r RequestContext) bool {
 	if r.Event == nil || r.Event.Message == nil {
 		return false
@@ -130,7 +133,9 @@ func doAddMedia(r RequestContext) {
 	msg := r.Event.Message
 	filename, media, err := r.Bot.GetFileBytes(msg)
 	if err != nil {
-		slog.ErrorContext(ctx, "can't get file bytes", "err", err.Error(), "msg", msg)
+		slog.ErrorContext(ctx, "can't get file bytes",
+			"err", err.Error(),
+			"msg", msg)
 	}
 
 	id, err := r.ApiClient.PostMeme(ctx, models.Meme{
@@ -139,14 +144,17 @@ func doAddMedia(r RequestContext) {
 		Descriptions: map[string]string{"general": msg.Caption},
 	})
 	if err != nil {
-		r.Bot.SendError(ctx, r.MustChat(), "can't create meme")
-		slog.ErrorContext(ctx, "can't create meme", "error", err.Error())
+		r.SendError("can't create meme")
+		slog.ErrorContext(ctx, "can't create meme",
+			"error", err.Error())
 	}
 	err = r.ApiClient.PutMedia(ctx, models.Media{ID: models.MediaID(id), Body: media}, filename)
 	if err != nil {
-		r.Bot.SendError(ctx, r.MustChat(), "can't set media")
-		slog.ErrorContext(ctx, "can't set media", "error", err.Error())
+		r.SendError("can't set media")
+		slog.ErrorContext(ctx, "can't set media",
+			"error", err.Error())
 	}
-	slog.InfoContext(ctx, "Meme created", "id", id)
-	r.Bot.SendMessage(ctx, r.MustChat(), fmt.Sprintf("Meme created\nid=<code>%s</code>", id))
+	slog.InfoContext(ctx, "Meme created",
+		"id", id)
+	r.SendMessageReply(fmt.Sprintf("<code>%s</code>", id), msg.MessageID)
 }

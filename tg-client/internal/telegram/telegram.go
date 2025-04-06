@@ -40,6 +40,18 @@ func (b *MSBot) SendMessage(ctx context.Context, chatID int64, text string) (int
 	return m.MessageID, nil
 }
 
+func (b *MSBot) SendMessageReply(ctx context.Context, chatID int64, text string, replyTo int) (int, error) {
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = tgbotapi.ModeHTML
+	msg.ReplyToMessageID = replyTo
+	m, err := b.bot.Send(msg)
+	if err != nil {
+		slog.ErrorContext(ctx, "can't send message", "error", err.Error(), "chat", chatID, "text", text)
+		return 0, fmt.Errorf("can't send message: %w", err)
+	}
+	return m.MessageID, nil
+}
+
 func (b *MSBot) SendError(ctx context.Context, chatID int64, msg string) {
 	_, _ = b.SendMessage(ctx, chatID, fmt.Sprintf("error: %s\nrequest-id: <code>%s</code>", msg, "id"))
 }
@@ -51,11 +63,7 @@ type MediaGroupEntry struct {
 	Body     []byte
 }
 
-func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []MediaGroupEntry) (int, error) {
-	if len(medias) == 0 {
-		return 0, errors.New("no medias provided")
-	}
-
+func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []MediaGroupEntry) {
 	mediaGroup := make([]interface{}, 0, len(medias))
 	for _, media := range medias {
 		file := tgbotapi.FileBytes{Name: media.Filename, Bytes: media.Body}
@@ -77,12 +85,7 @@ func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []Media
 	}
 
 	msg := tgbotapi.NewMediaGroup(chatID, mediaGroup)
-	m, err := b.bot.Send(msg)
-	if err != nil {
-		slog.ErrorContext(ctx, "can't send media group", "error", err.Error(), "chat", chatID)
-		return 0, fmt.Errorf("can't send message: %w", err)
-	}
-	return m.MessageID, nil
+	_, _ = b.bot.Send(msg)
 }
 
 func (b *MSBot) GetFileBytes(message *tgbotapi.Message) (string, []byte, error) {
