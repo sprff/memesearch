@@ -63,7 +63,7 @@ func (c *Client) DeleteMeme(ctx context.Context, id models.MemeID) error {
 	return err
 }
 
-// // Media
+// Media
 
 func (c *Client) PutMedia(ctx context.Context, media models.Media, filename string) error {
 	req := requester.Request{
@@ -87,7 +87,7 @@ func (c *Client) PutMedia(ctx context.Context, media models.Media, filename stri
 
 func (c *Client) GetMedia(ctx context.Context, id models.MediaID) (models.Media, error) {
 	req := requester.Request{
-		Method: "PUT",
+		Method: "GET",
 		Url:    fmt.Sprintf("%s/media/%s", c.Url, id),
 	}
 	resp, err := req.Do()
@@ -95,10 +95,50 @@ func (c *Client) GetMedia(ctx context.Context, id models.MediaID) (models.Media,
 		return models.Media{}, fmt.Errorf("can't do request: %w", err)
 	}
 	defer resp.Body.Close()
-	res := models.Media{ID: id}
-	res.Body, err = io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusOK {
+		res := models.Media{ID: id}
+		res.Body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return models.Media{}, fmt.Errorf("can't read body: %w", err)
+		}
+		return res, nil
+	}
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return models.Media{}, fmt.Errorf("can't read body: %w", err)
+	}
+
+	res := struct {
+		Status  string `json:"status"`
+		ErrData any    `json:"err_data"`
+	}{}
+
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return models.Media{}, fmt.Errorf("can't unmarshal response: %w", err)
+	}
+
+	if res.Status != "OK" {
+		err = requester.ParseError(res.Status, res.ErrData)
+		return models.Media{}, err
+	}
+	panic("unexpected OK status with non 200 Code")
+
+}
+
+// Search
+func (c *Client) SearchMemeByBoardID(ctx context.Context, board_id models.MediaID, desc map[string]string) ([]models.Meme, error) {
+
+	req := requester.Request{
+		Method: "GET",
+		Url:    fmt.Sprintf("%s/search/byboard/%s", c.Url, board_id),
+		Body:   desc,
+	}
+	res := []models.Meme{}
+	err := processAndParse(req, &res)
+	if err != nil {
+		return nil, fmt.Errorf("can't read body: %w", err)
 	}
 	return res, nil
 }

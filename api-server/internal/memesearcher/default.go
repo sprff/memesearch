@@ -41,8 +41,12 @@ func (m *Default) SearchForBoard(ctx context.Context, id models.BoardID, req map
 	slog.Debug("memes get", "memes", memes)
 	res := make([]ScoreResult, 0, len(memes))
 	for _, meme := range memes {
+		score := m.score(ctx, req, meme.Descriptions)
+		if score < 0.1 {
+			continue
+		}
 		res = append(res, ScoreResult{
-			Score: m.score(ctx, req, meme.Descriptions),
+			Score: score,
 			ID:    meme.ID,
 		})
 	}

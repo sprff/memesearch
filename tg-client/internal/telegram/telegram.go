@@ -2,17 +2,20 @@ package telegram
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
+	"path"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type MSBot struct {
-	bot *tgbotapi.BotAPI
+	bot         *tgbotapi.BotAPI
 }
-
 
 func NewMSBot(token string) (*MSBot, error) {
 	bot, err := tgbotapi.NewBotAPI(token)
@@ -26,67 +29,77 @@ func (b *MSBot) UpdateChan() tgbotapi.UpdatesChannel {
 	return b.bot.GetUpdatesChan(tgbotapi.UpdateConfig{})
 }
 
-func (b *MSBot) SendMessage(chatID int64, text string) error {
+func (b *MSBot) SendMessage(ctx context.Context, chatID int64, text string) (int, error) {
 	msg := tgbotapi.NewMessage(chatID, text)
-	_, err := b.bot.Send(msg)
-	return err
+	msg.ParseMode = tgbotapi.ModeHTML
+	m, err := b.bot.Send(msg)
+	if err != nil {
+		slog.ErrorContext(ctx, "can't send message", "error", err.Error(), "chat", chatID, "text", text)
+		return 0, fmt.Errorf("can't send message: %w", err)
+	}
+	return m.MessageID, nil
 }
 
-func (b *MSBot) SendPhoto(chatID int64, photo []byte, caption string) error {
-	file := tgbotapi.FileBytes{Name: "photo.jpg", Bytes: photo}
-	msg := tgbotapi.NewPhoto(chatID, file)
-	msg.Caption = caption
-	_, err := b.bot.Send(msg)
-	return err
+func (b *MSBot) SendError(ctx context.Context, chatID int64, msg string) {
+	_, _ = b.SendMessage(ctx, chatID, fmt.Sprintf("error: %s\nrequest-id: <code>%s</code>", msg, "id"))
 }
 
-func (b *MSBot) SendPhotoGroup(chatID int64, photos [][]byte, caption string) error {
-	if len(photos) == 0 {
-		return errors.New("no photos provided")
+// func (b *MSBot) SendPhoto(ctx context.Context, chatID int64, photo []byte, caption string) error {
+// 	file := tgbotapi.FileBytes{Name: "photo.jpg", Bytes: photo}
+// 	msg := tgbotapi.NewPhoto(chatID, file)
+// 	msg.Caption = caption
+// 	_, err := b.bot.Send(msg)
+// 	return err
+// }
+
+type MediaGroupEntry struct {
+	ID       string
+	Filename string
+	Caption  string
+	Body     []byte
+}
+
+func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []MediaGroupEntry) (int, error) {
+	if len(medias) == 0 {
+		return 0, errors.New("no medias provided")
 	}
 
-	mediaGroup := make([]interface{}, 0, len(photos))
-	for i, photo := range photos {
-		file := tgbotapi.FileBytes{Name: "photo.jpg", Bytes: photo}
-		inputMedia := tgbotapi.NewInputMediaPhoto(file)
-		if i == 0 {
-			inputMedia.Caption = caption
+	mediaGroup := make([]interface{}, 0, len(medias))
+	for _, media := range medias {
+		file := tgbotapi.FileBytes{Name: media.Filename, Bytes: media.Body}
+		switch path.Ext(media.Filename) {
+		case ".jpg", ".png":
+			inputMedia := tgbotapi.NewInputMediaPhoto(file)
+			inputMedia.Caption = media.Caption
+			mediaGroup = append(mediaGroup, inputMedia)
+
+		case ".mp4":
+			inputMedia := tgbotapi.NewInputMediaVideo(file)
+			inputMedia.Caption = media.Caption
+			mediaGroup = append(mediaGroup, inputMedia)
+		default:
+			b.SendError(ctx, chatID, "Unexpected file format")
+			slog.ErrorContext(ctx, "Unexpected file format",
+				"filename", media.Filename)
 		}
-		mediaGroup = append(mediaGroup, inputMedia)
 	}
 
 	msg := tgbotapi.NewMediaGroup(chatID, mediaGroup)
-	_, err := b.bot.Send(msg)
-	return err
-}
-
-func (b *MSBot) SendVideo(chatID int64, video []byte, caption string) error {
-	file := tgbotapi.FileBytes{Name: "video.mp4", Bytes: video}
-	msg := tgbotapi.NewVideo(chatID, file)
-	msg.Caption = caption
-	_, err := b.bot.Send(msg)
-	return err
-}
-
-func (b *MSBot) SendVideoGroup(chatID int64, videos [][]byte, caption string) error {
-	if len(videos) == 0 {
-		return errors.New("no videos provided")
+	m, err := b.bot.Send(msg)
+	if err != nil {
+		slog.ErrorContext(ctx, "can't send media group", "error", err.Error(), "chat", chatID)
+		return 0, fmt.Errorf("can't send message: %w", err)
 	}
-
-	mediaGroup := make([]interface{}, 0, len(videos))
-	for i, video := range videos {
-		file := tgbotapi.FileBytes{Name: "video.mp4", Bytes: video}
-		inputMedia := tgbotapi.NewInputMediaVideo(file)
-		if i == 0 {
-			inputMedia.Caption = caption
-		}
-		mediaGroup = append(mediaGroup, inputMedia)
-	}
-
-	msg := tgbotapi.NewMediaGroup(chatID, mediaGroup)
-	_, err := b.bot.Send(msg)
-	return err
+	return m.MessageID, nil
 }
+
+// func (b *MSBot) SendVideo(ctx context.Context, chatID int64, video []byte, caption string) error {
+// 	file := tgbotapi.FileBytes{Name: "video.mp4", Bytes: video}
+// 	msg := tgbotapi.NewVideo(chatID, file)
+// 	msg.Caption = caption
+// 	_, err := b.bot.Send(msg)
+// 	return err
+// }
 
 func (b *MSBot) GetFileBytes(message *tgbotapi.Message) ([]byte, error) {
 	var fileID string
@@ -115,7 +128,6 @@ func (b *MSBot) GetFileBytes(message *tgbotapi.Message) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	b.SendMessage(message.From.ID, "Start Copy")
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, resp.Body); err != nil {
 		return nil, err

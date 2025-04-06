@@ -3,7 +3,7 @@ package statemachine
 import (
 	"api-client/pkg/client"
 	"context"
-	"fmt"
+	"log/slog"
 	"tg-client/internal/telegram"
 )
 
@@ -25,19 +25,22 @@ func (s *Statemachine) Process() {
 	updates := s.bot.UpdateChan()
 	for update := range updates {
 		if chat := update.FromChat(); chat != nil {
+			ctx := context.Background()
 			if _, ok := s.states[chat.ID]; !ok {
-				s.states[chat.ID] = &DefaultState{}
+				s.states[chat.ID] = &CentralState{}
 			}
 			nw, err := s.states[chat.ID].Process(RequestContext{
-				Ctx:       context.Background(),
+				Ctx:       ctx,
 				Bot:       s.bot,
 				Event:     &update,
 				ApiClient: s.client})
 			if err != nil {
-				//Log
-				s.bot.SendMessage(chat.ID, fmt.Sprintf("Error: %v", err))
+				slog.ErrorContext(ctx, "can't process state",
+					"err", err.Error(),
+					"update", update)
 				continue
 			}
+
 			s.states[chat.ID] = nw
 		}
 	}
