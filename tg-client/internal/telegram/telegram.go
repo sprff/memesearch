@@ -14,7 +14,7 @@ import (
 )
 
 type MSBot struct {
-	bot         *tgbotapi.BotAPI
+	bot *tgbotapi.BotAPI
 }
 
 func NewMSBot(token string) (*MSBot, error) {
@@ -43,14 +43,6 @@ func (b *MSBot) SendMessage(ctx context.Context, chatID int64, text string) (int
 func (b *MSBot) SendError(ctx context.Context, chatID int64, msg string) {
 	_, _ = b.SendMessage(ctx, chatID, fmt.Sprintf("error: %s\nrequest-id: <code>%s</code>", msg, "id"))
 }
-
-// func (b *MSBot) SendPhoto(ctx context.Context, chatID int64, photo []byte, caption string) error {
-// 	file := tgbotapi.FileBytes{Name: "photo.jpg", Bytes: photo}
-// 	msg := tgbotapi.NewPhoto(chatID, file)
-// 	msg.Caption = caption
-// 	_, err := b.bot.Send(msg)
-// 	return err
-// }
 
 type MediaGroupEntry struct {
 	ID       string
@@ -93,15 +85,7 @@ func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []Media
 	return m.MessageID, nil
 }
 
-// func (b *MSBot) SendVideo(ctx context.Context, chatID int64, video []byte, caption string) error {
-// 	file := tgbotapi.FileBytes{Name: "video.mp4", Bytes: video}
-// 	msg := tgbotapi.NewVideo(chatID, file)
-// 	msg.Caption = caption
-// 	_, err := b.bot.Send(msg)
-// 	return err
-// }
-
-func (b *MSBot) GetFileBytes(message *tgbotapi.Message) ([]byte, error) {
+func (b *MSBot) GetFileBytes(message *tgbotapi.Message) (string, []byte, error) {
 	var fileID string
 
 	if len(message.Photo) > 0 {
@@ -115,23 +99,23 @@ func (b *MSBot) GetFileBytes(message *tgbotapi.Message) ([]byte, error) {
 	} else if message.Voice != nil {
 		fileID = message.Voice.FileID
 	} else {
-		return nil, errors.New("message does not contain a supported file type")
+		return "", nil, errors.New("message does not contain a supported file type")
 	}
 
 	fileURL, err := b.bot.GetFileDirectURL(fileID)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	resp, err := http.Get(fileURL)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	defer resp.Body.Close()
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, resp.Body); err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
-	return buf.Bytes(), nil
+	return path.Base(fileURL), buf.Bytes(), nil
 }

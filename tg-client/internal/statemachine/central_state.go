@@ -22,10 +22,10 @@ func (d *CentralState) Process(r RequestContext) (State, error) {
 		doInlineSearchRequest(r)
 		return &CentralState{}, nil
 	case isAddPhoto(r):
-		doAddPhoto(r)
+		doAddMedia(r)
 		return &CentralState{}, nil
 	case isAddVideo(r):
-		doAddVideo(r)
+		doAddMedia(r)
 		return &CentralState{}, nil
 	default:
 		return &CentralState{}, nil
@@ -59,10 +59,6 @@ func doSearchRequest(r RequestContext) {
 		r.Bot.SendMessage(ctx, r.MustChat(), "can't do search request")
 	}
 	sendMemes(memes, r)
-	// for _, meme := range memes {
-	// 	sendMeme(meme, r)
-	// }
-
 }
 
 func sendMemes(memes []models.Meme, r RequestContext) {
@@ -112,11 +108,6 @@ func isAddPhoto(r RequestContext) bool {
 	return true
 }
 
-func doAddPhoto(r RequestContext) {
-	ctx := r.Ctx
-	slog.InfoContext(ctx, "doAddPhoto")
-	r.Bot.SendMessage(ctx, r.MustChat(), "doAddPhoto")
-}
 
 func isAddVideo(r RequestContext) bool {
 	if r.Event == nil || r.Event.Message == nil {
@@ -134,8 +125,28 @@ func isAddVideo(r RequestContext) bool {
 	return true
 }
 
-func doAddVideo(r RequestContext) {
+func doAddMedia(r RequestContext) {
 	ctx := r.Ctx
-	slog.InfoContext(ctx, "doAddVideo")
-	r.Bot.SendMessage(ctx, r.MustChat(), "doAddVideo")
+	msg := r.Event.Message
+	filename, media, err := r.Bot.GetFileBytes(msg)
+	if err != nil {
+		slog.ErrorContext(ctx, "can't get file bytes", "err", err.Error(), "msg", msg)
+	}
+
+	id, err := r.ApiClient.PostMeme(ctx, models.Meme{
+		BoardID:      "board",
+		Filename:     filename,
+		Descriptions: map[string]string{"general": msg.Caption},
+	})
+	if err != nil {
+		r.Bot.SendError(ctx, r.MustChat(), "can't create meme")
+		slog.ErrorContext(ctx, "can't create meme", "error", err.Error())
+	}
+	err = r.ApiClient.PutMedia(ctx, models.Media{ID: models.MediaID(id), Body: media}, filename)
+	if err != nil {
+		r.Bot.SendError(ctx, r.MustChat(), "can't set media")
+		slog.ErrorContext(ctx, "can't set media", "error", err.Error())
+	}
+	slog.InfoContext(ctx, "Meme created", "id", id)
+	r.Bot.SendMessage(ctx, r.MustChat(), fmt.Sprintf("Meme created\nid=<code>%s</code>", id))
 }
