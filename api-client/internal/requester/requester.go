@@ -103,6 +103,12 @@ func ReadResponse[T any](r io.Reader, input *T, apiErr *error) error {
 
 func ParseError(status string, data any) error {
 	switch status {
+	case "BOARD_NOT_FOUND":
+		return models.ErrBoardNotFound
+	case "MEDIA_NOT_FOUND":
+		return models.ErrMediaNotFound
+	case "MEDIA_IS_REQUIRED":
+		return models.ErrMediaIsRequired
 	case "MEME_NOT_FOUND":
 		return models.ErrMemeNotFound
 	case "INVALID_INPUT":

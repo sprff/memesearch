@@ -8,7 +8,7 @@ import (
 func processAndParse[T any](req requester.Request, res *T) error {
 	resp, err := req.Do()
 	if err != nil {
-		return fmt.Errorf("can't do request: ")
+		return fmt.Errorf("can't do request: %w", err)
 	}
 	var apiErr error
 	err = requester.ReadResponse(resp.Body, res, &apiErr)

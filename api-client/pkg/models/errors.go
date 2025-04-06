@@ -10,6 +10,7 @@ var ErrBoardNotFound = errors.New("Board not found")
 
 // Media
 var ErrMediaNotFound = errors.New("Media not found")
+var ErrMediaIsRequired = errors.New("Media is required")
 
 // Meme
 var ErrMemeNotFound = errors.New("Meme not found")
