@@ -60,13 +60,13 @@ type MediaGroupEntry struct {
 	ID       string
 	Filename string
 	Caption  string
-	FileURL  string
+	Body     []byte
 }
 
 func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []MediaGroupEntry) error {
 	mediaGroup := make([]interface{}, 0, len(medias))
 	for _, media := range medias {
-		file := tgbotapi.FileURL(media.FileURL)
+		file := tgbotapi.FileBytes{Name: media.Filename, Bytes: media.Body}
 		switch path.Ext(media.Filename) {
 		case ".jpg", ".png":
 			inputMedia := tgbotapi.NewInputMediaPhoto(file)

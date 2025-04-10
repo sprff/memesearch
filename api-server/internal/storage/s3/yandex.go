@@ -7,6 +7,7 @@ import (
 	"io"
 	mscfg "memesearch/internal/config"
 	"memesearch/internal/models"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"

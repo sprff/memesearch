@@ -82,7 +82,7 @@ func sendMemes(memes []models.Meme, r RequestContext) {
 			}
 			continue
 		}
-		mges = append(mges, telegram.MediaGroupEntry{Filename: meme.Filename, Caption: caption, FileURL: media.URL})
+		mges = append(mges, telegram.MediaGroupEntry{Filename: meme.Filename, Caption: caption, Body: media.Body})
 	}
 	err := r.SendMediaGroup(mges)
 	if err != nil {
