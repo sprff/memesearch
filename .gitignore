@@ -4,4 +4,6 @@
 **/*.secret
 **/*.secrets*
 /container
-api-server/logs
+*/logs
+*/locallogs
+**/__debug_bin*

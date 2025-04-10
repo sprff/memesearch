@@ -22,7 +22,9 @@ func main() {
 }
 
 func setLogger() {
-	handler, err := contextlogger.NewContextHandler(fmt.Sprintf("logs/%s.log", time.Now().Format("2006-01-02")), &slog.HandlerOptions{Level: slog.LevelDebug})
+	logFolder := os.Getenv("LOG_FOLDER")
+	date := time.Now().Format("2006-01-02")
+	handler, err := contextlogger.NewContextHandler(fmt.Sprintf("%s/%s.log", logFolder, date), &slog.HandlerOptions{Level: slog.LevelDebug})
 	processError("Can't get context handler", err)
 	slog.SetDefault(slog.New(handler))
 }

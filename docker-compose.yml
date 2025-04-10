@@ -8,6 +8,7 @@ services:
     depends_on:
       - apiserver-database
     environment:
+      LOG_FOLDER: logs/
       MS_API_CONFIG_PATH: /app/config/test/config.yml #TODO как то прокинуть тест/прод
       DB_USER: ${MS_APISERVER_DB_USER}
       DB_PASS: ${MS_APISERVER_DB_PASS}

@@ -2,14 +2,17 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	mscfg "memesearch/internal/config"
+	"memesearch/internal/models"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 type YaClientS3 struct {
@@ -47,8 +50,13 @@ func (ya *YaClientS3) GetObject(ctx context.Context, key string) (io.ReadCloser,
 	})
 
 	if err != nil {
+		var noSuchKeyErr *types.NoSuchKey
+		if errors.As(err, &noSuchKeyErr) {
+			return nil, models.ErrMediaNotFound
+		}
 		return nil, fmt.Errorf("can't get S3 object: %w", err)
 	}
+
 	return result.Body, nil
 
 }
