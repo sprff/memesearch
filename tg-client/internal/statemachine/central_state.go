@@ -72,19 +72,25 @@ func sendMemes(memes []models.Meme, r RequestContext) {
 			switch {
 			case errors.Is(err, models.ErrMediaNotFound):
 				r.SendError("Meme don't have media")
-				slog.WarnContext(ctx, "meme don't have media",
-					"id", meme.ID)
+				slog.WarnContext(ctx, "Meme don't have media",
+					"meme_id", meme.ID)
 			default:
 				r.SendError("Unexpected error")
-				slog.ErrorContext(ctx, "can't get media",
+				slog.ErrorContext(ctx, "Can't get media",
 					"error", err.Error(),
-					"id", meme.ID)
+					"meme_id", meme.ID)
 			}
 			continue
 		}
-		mges = append(mges, telegram.MediaGroupEntry{Filename: meme.Filename, Caption: caption, Body: media.Body})
+		mges = append(mges, telegram.MediaGroupEntry{Filename: meme.Filename, Caption: caption, FileURL: media.URL})
 	}
-	r.SendMediaGroup(mges)
+	err := r.SendMediaGroup(mges)
+	if err != nil {
+		r.SendError("Can't send mediagroup")
+		slog.ErrorContext(ctx, "Can't send mediagroup",
+			"error", err.Error(),
+		)
+	}
 }
 
 func isInlineSearchRequest(r RequestContext) bool {

@@ -56,9 +56,23 @@ func (ya *YaClientS3) GetObject(ctx context.Context, key string) (io.ReadCloser,
 		}
 		return nil, fmt.Errorf("can't get S3 object: %w", err)
 	}
-
 	return result.Body, nil
+}
 
+func (ya *YaClientS3) GetObjectLink(ctx context.Context, key string, expiry time.Duration) (string, error) {
+	presignClient := s3.NewPresignClient(ya.client)
+
+	req, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket:                     aws.String(ya.bucket),
+		Key:                        aws.String(key),
+		ResponseContentDisposition: aws.String("inline"),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = expiry
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
+	}
+	return req.URL, nil
 }
 
 func (ya *YaClientS3) PutObject(ctx context.Context, name string, body io.Reader) error {

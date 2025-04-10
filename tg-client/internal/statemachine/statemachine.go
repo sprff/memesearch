@@ -3,6 +3,7 @@ package statemachine
 import (
 	"api-client/pkg/client"
 	"context"
+	"fmt"
 	"log/slog"
 	"tg-client/internal/telegram"
 )
@@ -24,6 +25,7 @@ func New(bot *telegram.MSBot, client *client.Client) *Statemachine {
 func (s *Statemachine) Process() {
 	updates := s.bot.UpdateChan()
 	for update := range updates {
+		fmt.Printf("%+v\n", update)
 		if chat := update.FromChat(); chat != nil {
 			ctx := context.Background()
 			if _, ok := s.states[chat.ID]; !ok {
@@ -42,6 +44,10 @@ func (s *Statemachine) Process() {
 			}
 
 			s.states[chat.ID] = nw
+		}
+		if q := update.InlineQuery; q != nil {
+			fmt.Printf("%+v\n", q)
+			s.bot.Test(q)
 		}
 	}
 }
