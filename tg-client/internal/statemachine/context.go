@@ -35,6 +35,6 @@ func (r RequestContext) SendError(msg string) {
 	r.Bot.SendError(r.Ctx, r.MustChat(), msg)
 }
 
-func (r RequestContext) SendMediaGroup(medias []telegram.MediaGroupEntry) error {
-	return r.Bot.SendMediaGroup(r.Ctx, r.MustChat(), medias)
+func (r RequestContext) SendMediaGroup(medias []telegram.MediaGroupEntry) {
+	r.Bot.SendMediaGroup(r.Ctx, r.MustChat(), medias)
 }

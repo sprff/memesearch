@@ -18,9 +18,6 @@ func (d *CentralState) Process(r RequestContext) (State, error) {
 	case isSearchRequest(r):
 		doSearchRequest(r)
 		return &CentralState{}, nil
-	case isInlineSearchRequest(r):
-		doInlineSearchRequest(r)
-		return &CentralState{}, nil
 	case isAddPhoto(r):
 		doAddMedia(r)
 		return &CentralState{}, nil
@@ -84,22 +81,7 @@ func sendMemes(memes []models.Meme, r RequestContext) {
 		}
 		mges = append(mges, telegram.MediaGroupEntry{Filename: meme.Filename, Caption: caption, Body: media.Body})
 	}
-	err := r.SendMediaGroup(mges)
-	if err != nil {
-		r.SendError("Can't send mediagroup")
-		slog.ErrorContext(ctx, "Can't send mediagroup",
-			"error", err.Error(),
-		)
-	}
-}
-
-func isInlineSearchRequest(r RequestContext) bool {
-	return false
-}
-
-func doInlineSearchRequest(r RequestContext) {
-	ctx := r.Ctx
-	slog.InfoContext(ctx, "doInlineSearchRequest")
+	r.SendMediaGroup(mges)
 }
 
 func isAddPhoto(r RequestContext) bool {

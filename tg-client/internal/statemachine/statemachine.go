@@ -3,9 +3,11 @@ package statemachine
 import (
 	"api-client/pkg/client"
 	"context"
-	"fmt"
+	"encoding/json"
 	"log/slog"
 	"tg-client/internal/telegram"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type Statemachine struct {
@@ -25,17 +27,18 @@ func New(bot *telegram.MSBot, client *client.Client) *Statemachine {
 func (s *Statemachine) Process() {
 	updates := s.bot.UpdateChan()
 	for update := range updates {
-		fmt.Printf("%+v\n", update)
+		ctx := context.Background() //with update id
+		r := RequestContext{
+			Ctx:       ctx,
+			Bot:       s.bot,
+			Event:     &update,
+			ApiClient: s.client}
+		logUpdate(ctx, update)
 		if chat := update.FromChat(); chat != nil {
-			ctx := context.Background()
 			if _, ok := s.states[chat.ID]; !ok {
 				s.states[chat.ID] = &CentralState{}
 			}
-			nw, err := s.states[chat.ID].Process(RequestContext{
-				Ctx:       ctx,
-				Bot:       s.bot,
-				Event:     &update,
-				ApiClient: s.client})
+			nw, err := s.states[chat.ID].Process(r)
 			if err != nil {
 				slog.ErrorContext(ctx, "can't process state",
 					"err", err.Error(),
@@ -46,8 +49,15 @@ func (s *Statemachine) Process() {
 			s.states[chat.ID] = nw
 		}
 		if q := update.InlineQuery; q != nil {
-			fmt.Printf("%+v\n", q)
-			s.bot.Test(q)
+			processInline(q, r)
 		}
 	}
+}
+
+func logUpdate(ctx context.Context, u tgbotapi.Update) {
+	data, _ := json.Marshal(u)
+	slog.InfoContext(ctx, "New update",
+		"data", data,
+		"from", u.FromChat(),
+	)
 }
