@@ -1,0 +1,412 @@
+openapi: 3.0.0
+info:
+  title: Meme Search API
+  description: API for searching meme
+  version: 1.0.0
+servers:
+  - url: http://localhost:8091
+    description: localhost
+
+paths:
+  /:
+    get:
+      tags:
+        - General
+      summary: Get API information
+      description: Returns general information about the API service
+      operationId: About
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiInfo'
+        '500':
+          description: Internal server error
+
+  /memes:
+    get:
+      tags:
+        - Memes
+      summary: Get paginated list of memes
+      description: Returns a paginated list of memes with optional filtering
+      operationId: ListMemes
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/sortBy'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMemes'
+        '400':
+          description: Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+
+    post:
+      tags:
+        - Memes
+      summary: Create a new meme
+      description: Creates a new meme and returns its ID
+      operationId: PostMeme
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemeCreate'
+      responses:
+        '201':
+          description: Meme created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+                    example: "d290f1ee6c544b0190e6d701748f0851"
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+
+  /memes/{id}:
+    get:
+      tags:
+        - Memes
+      summary: Get meme by ID
+      description: Returns a single meme by its ID
+      operationId: GetMemeByID
+      parameters:
+        - $ref: '#/components/parameters/memeId'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meme'
+        '404':
+          description: Meme not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+
+    put:
+      tags:
+        - Memes
+      summary: Update meme by ID
+      description: Updates an existing meme by its ID
+      operationId: UpdateMemeByID
+      parameters:
+        - $ref: '#/components/parameters/memeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemeUpdate'
+      responses:
+        '200':
+          description: Meme updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meme'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Meme not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+
+
+    delete:
+      tags:
+        - Memes
+      summary: Delete meme by ID
+      description: Deletes a meme by its ID
+      operationId: DeleteMemeByID
+      parameters:
+        - $ref: '#/components/parameters/memeId'
+      responses:
+        '204':
+          description: Meme deleted successfully
+        '404':
+          description: Meme not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+
+
+  /media/{id}:
+    put:
+      tags:
+        - Media
+      summary: Upload or update media file
+      description: Uploads or updates a media file (image/video) by ID
+      operationId: PutMediaByID
+      parameters:
+        - $ref: '#/components/parameters/mediaId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                media:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Media updated successfully
+        '400':
+          description: Invalid file format or size
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: Unsupported media type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+
+
+    get:
+      tags:
+        - Media
+      summary: Get media file by ID
+      description: Gets a media file by its ID
+      operationId: GetMediaByID
+      parameters:
+        - $ref: '#/components/parameters/mediaId'
+      responses:
+        '200':
+          description: Success
+          content:
+            image/jpeg:
+              schema:
+                  type: string
+                  format: binary
+            image/jpg:
+              schema:
+                  type: string
+                  format: binary
+            image/png:
+              schema:
+                  type: string
+                  format: binary
+            video/mp4:
+              schema:
+                  type: string
+                  format: binary
+            application/octet-stream:
+              schema:
+                  type: string
+                  format: binary
+        '404':
+          description: Media not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+
+
+components:
+  schemas:
+    ApiInfo:
+      type: object
+      required:
+        - apiName
+        - version
+        - description
+      properties:
+        apiName:
+          type: string
+          example: Meme Search API
+        version:
+          type: string
+          example: 1.0.0
+        description:
+          type: string
+          example: API for managing internet memes and related media
+
+    Meme:
+      type: object
+      required:
+        - id
+        - board_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          example: "d290f1ee6c544b0190e6d701748f0851"
+        board_id:
+          type: string
+          example: "d290f1ee6c544b0190e6d701748f0851"
+        filename:
+          type: string
+          example: "file.mp4"
+        description:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MemeCreate:
+      type: object
+      required:
+        - board_id
+      properties:
+        board_id:
+          type: string
+          example: "d290f1ee6c544b0190e6d701748f0851"
+        filename:
+          type: string
+          example: "file.mp4"
+        description:
+          type: object
+
+    MemeUpdate:
+      type: object
+      properties:
+        board_id:
+          type: string
+          example: "d290f1ee6c544b0190e6d701748f0851"
+        filename:
+          type: string
+          example: "file.mp4"
+        description:
+          type: object
+
+    PaginatedMemes:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Meme'
+        total:
+          type: integer
+          example: 100
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 10
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: "MEDIA_NOT_FOUND"
+        message:
+          type: string
+          example: "The requested media was not found"
+        body:
+          type: object
+
+  parameters:
+    page:
+      name: page
+      in: query
+      description: Page number
+      required: false
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+
+    pageSize:
+      name: pageSize
+      in: query
+      description: Number of items per page
+      required: false
+      schema:
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 100
+
+    sortBy:
+      name: sortBy
+      in: query
+      description: Field to sort by
+      required: false
+      schema:
+        type: string
+        enum: [id, createdAt, updatedAt]
+        default: createdAt
+
+    memeId:
+      name: id
+      in: path
+      description: ID of the meme
+      required: true
+      schema:
+        type: string
+
+    mediaId:
+      name: id
+      in: path
+      description: ID of the media file
+      required: true
+      schema:
+        type: string

@@ -28,29 +28,40 @@ func (s *Statemachine) Process() {
 	updates := s.bot.UpdateChan()
 	for update := range updates {
 		ctx := context.Background() //with update id
-		r := RequestContext{
-			Ctx:       ctx,
-			Bot:       s.bot,
-			Event:     &update,
-			ApiClient: s.client}
-		logUpdate(ctx, update)
-		if chat := update.FromChat(); chat != nil {
-			if _, ok := s.states[chat.ID]; !ok {
-				s.states[chat.ID] = &CentralState{}
-			}
-			nw, err := s.states[chat.ID].Process(r)
-			if err != nil {
-				slog.ErrorContext(ctx, "can't process state",
-					"err", err.Error(),
-					"update", update)
-				continue
-			}
+		s.processUpdate(ctx, update)
 
-			s.states[chat.ID] = nw
+	}
+}
+
+func (s *Statemachine) processUpdate(ctx context.Context, u tgbotapi.Update) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			slog.ErrorContext(ctx, "Paniced", "reason", r)
 		}
-		if q := update.InlineQuery; q != nil {
-			processInline(q, r)
+	}()
+	r := RequestContext{
+		Ctx:       ctx,
+		Bot:       s.bot,
+		Event:     &u,
+		ApiClient: s.client}
+	logUpdate(ctx, u)
+	if chat := u.FromChat(); chat != nil {
+		if _, ok := s.states[chat.ID]; !ok {
+			s.states[chat.ID] = &CentralState{}
 		}
+		nw, err := s.states[chat.ID].Process(r)
+		if err != nil {
+			slog.ErrorContext(ctx, "can't process state",
+				"err", err.Error(),
+				"update", u)
+			return
+		}
+
+		s.states[chat.ID] = nw
+	}
+	if q := u.InlineQuery; q != nil {
+		processInline(q, r)
 	}
 }
 

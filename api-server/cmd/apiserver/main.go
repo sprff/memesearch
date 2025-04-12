@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"memesearch/internal/api"
+	"memesearch/internal/apiserver"
 	"memesearch/internal/config"
 	"memesearch/internal/contextlogger"
-	"memesearch/internal/httpserver"
+	"memesearch/internal/memesearcher"
+	"memesearch/internal/storage"
 	"net/http"
 	"os"
 	"time"
@@ -14,11 +17,15 @@ import (
 func main() {
 	setLogger()
 	cfg := getConfig()
-	server, err := httpserver.New(cfg)
-	processError("Failed to create server", err)
+	s, err := storage.New(cfg)
+	processError("Failed to create storage", err)
+	searcher, err := memesearcher.New(cfg)
+	processError("Failed to create searcher", err)
+	api := api.New(s, cfg.Secrets, searcher)
+	server := apiserver.NewHandler(api)
 	slog.Info("Run server", "port", cfg.Server.Port)
-	http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port), server)
-	slog.Info("Server stopped")
+	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port), server)
+	slog.Info("Server stopped", "err", err)
 }
 
 func setLogger() {

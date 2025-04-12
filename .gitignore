@@ -6,4 +6,5 @@
 /container
 */logs
 */locallogs
+**/*.gen.*
 **/__debug_bin*
