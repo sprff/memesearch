@@ -1,20 +1,10 @@
 package client
 
 import (
-	"api-client/internal/requester"
+	"api-client/internal/apiclient"
 	"fmt"
 )
 
-func processAndParse[T any](req requester.Request, res *T) error {
-	resp, err := req.Do()
-	if err != nil {
-		return fmt.Errorf("can't do request: %w", err)
-	}
-	var apiErr error
-	err = requester.ReadResponse(resp.Body, res, &apiErr)
-	if err != nil {
-		return fmt.Errorf("can't read response: %w", err)
-	}
-	return apiErr
-
+func parseApiError(e apiclient.Error) error {
+	return fmt.Errorf("unexpected error: %s, %s", e.Code, e.Message) //TODO
 }

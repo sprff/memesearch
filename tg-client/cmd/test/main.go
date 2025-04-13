@@ -2,6 +2,7 @@ package main
 
 import (
 	"api-client/pkg/client"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -15,7 +16,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create bot: %v", err)
 	}
-	client := &client.Client{Url: "http://localhost:1781"}
+	client, err := client.New("http://localhost:1781")
+	if err != nil {
+		fmt.Println("can't get client", err)
+	}
 
 	state := statemachine.New(bot, client)
 	state.Process()

@@ -1,172 +1,211 @@
 package client
 
 import (
-	"api-client/internal/requester"
+	"api-client/internal/apiclient"
 	"api-client/pkg/models"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
+	"mime/multipart"
 )
 
 type Client struct {
-	Url string
+	api *apiclient.ClientWithResponses
+}
+
+func New(url string) (*Client, error) {
+	c, err := apiclient.NewClientWithResponses(url)
+	if err != nil {
+		return nil, fmt.Errorf("can't create client with responses: %w", err)
+	}
+	return &Client{api: c}, nil
+
 }
 
 // Meme
 
 func (c *Client) PostMeme(ctx context.Context, meme models.Meme) (models.MemeID, error) {
-	req := requester.Request{
-		Method: "POST",
-		Url:    fmt.Sprintf("%s/memes", c.Url),
-		Body:   meme,
+	req := apiclient.MemeCreate{BoardId: string(meme.BoardID)}
+	if meme.Descriptions != nil {
+		desc := map[string]any{}
+		for k, v := range meme.Descriptions {
+			desc[k] = v
+		}
+		req.Description = &desc
 	}
-	res := struct {
-		ID models.MemeID `json:"id"`
-	}{}
+	if meme.Filename != "" {
+		req.Filename = &meme.Filename
+	}
 
-	err := processAndParse(req, &res)
-	return res.ID, err
+	resp, err := c.api.PostMemeWithResponse(ctx, req)
+	if err != nil {
+		return models.MemeID(""), fmt.Errorf("can't post meme: %w", err)
+	}
 
+	if resp.JSON201 != nil {
+		return models.MemeID(resp.JSON201.Id), nil
+	}
+	if resp.JSON400 != nil {
+		return models.MemeID(""), parseApiError(*resp.JSON400)
+	}
+	return models.MemeID(""), fmt.Errorf("unexpected response")
 }
 
 func (c *Client) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, error) {
-	req := requester.Request{
-		Method: "GET",
-		Url:    fmt.Sprintf("%s/memes/%s", c.Url, id),
+
+	resp, err := c.api.GetMemeByIDWithResponse(ctx, apiclient.MemeId(id))
+	if err != nil {
+		return models.Meme{}, fmt.Errorf("can't get meme: %w", err)
 	}
-	var res models.Meme
-	err := processAndParse(req, &res)
-	return res, err
+	if resp.JSON200 != nil {
+		return convertToModel(*resp.JSON200), nil
+	}
+	if resp.JSON404 != nil {
+		return models.Meme{}, parseApiError(*resp.JSON404)
+	}
+	return models.Meme{}, fmt.Errorf("unexpected response")
+
 }
 
-func (c *Client) PutMeme(ctx context.Context, meme models.Meme) error {
-	req := requester.Request{
-		Method: "PUT",
-		Url:    fmt.Sprintf("%s/memes/%s", c.Url, meme.ID),
-		Body:   meme,
+func (c *Client) PutMeme(ctx context.Context, meme models.Meme) (models.Meme, error) {
+	req := apiclient.MemeUpdate{}
+	if meme.BoardID != "" {
+		req.BoardId = (*string)(&meme.BoardID)
 	}
-	res := struct{}{}
-	err := processAndParse(req, &res)
-	return err
+	if meme.Filename != "" {
+		req.Filename = &meme.Filename
+	}
+	if meme.Descriptions != nil {
+		dsc := convertMapToAny(meme.Descriptions)
+		req.Description = &dsc
+	}
+
+	resp, err := c.api.UpdateMemeByIDWithResponse(ctx, apiclient.MemeId(meme.ID), req)
+	if err != nil {
+		return models.Meme{}, fmt.Errorf("can't update meme: %w", err)
+	}
+	if resp.JSON200 != nil {
+		return convertToModel(*resp.JSON200), nil
+	}
+	if resp.JSON404 != nil {
+		return models.Meme{}, parseApiError(*resp.JSON404)
+	}
+	if resp.JSON400 != nil {
+		return models.Meme{}, parseApiError(*resp.JSON400)
+	}
+	return models.Meme{}, fmt.Errorf("unexpected response")
 }
 
 func (c *Client) DeleteMeme(ctx context.Context, id models.MemeID) error {
-	req := requester.Request{
-		Method: "DELETE",
-		Url:    fmt.Sprintf("%s/memes/%s", c.Url, id),
+	resp, err := c.api.DeleteMemeByIDWithResponse(ctx, apiclient.MemeId(id))
+	if err != nil {
+		return fmt.Errorf("can't delete meme: %w", err)
 	}
-	res := struct{}{}
-	err := processAndParse(req, &res)
-	return err
+	if resp.StatusCode() == 204 {
+		return nil
+	}
+	if resp.JSON404 != nil {
+		return parseApiError(*resp.JSON404)
+	}
+
+	return fmt.Errorf("unexpected response: %s", "")
 }
 
 // Media
 
 func (c *Client) PutMedia(ctx context.Context, media models.Media, filename string) error {
-	req := requester.Request{
-		Method: "PUT",
-		Url:    fmt.Sprintf("%s/media/%s", c.Url, media.ID),
-		MultipartFiles: map[string]struct {
-			Data io.Reader
-			Name string
-		}{
-			"media": {
-				Data: bytes.NewBuffer(media.Body),
-				Name: filename,
-			},
-		},
+	body, contentType, err := createMultipart("media", filename, media.Body)
+	if err != nil {
+		return fmt.Errorf("can't create multipart: %w", err)
 	}
-	res := struct{}{}
-	err := processAndParse(req, &res)
-	return err
 
+	resp, err := c.api.PutMediaByIDWithBodyWithResponse(ctx, apiclient.MediaId(media.ID), contentType, body)
+	if err != nil {
+		return fmt.Errorf("can't put media: %w", err)
+	}
+	if resp.StatusCode() == 200 {
+		return nil
+	}
+	if resp.JSON400 != nil {
+		return parseApiError(*resp.JSON400)
+	}
+	return fmt.Errorf("unexpected response: %s", resp.Body)
 }
 
 func (c *Client) GetMedia(ctx context.Context, id models.MediaID) (models.Media, error) {
-	req := requester.Request{
-		Method: "GET",
-		Url:    fmt.Sprintf("%s/media/%s", c.Url, id),
-	}
-	resp, err := req.Do()
+	resp, err := c.api.GetMediaByIDWithResponse(ctx, apiclient.MediaId(id))
 	if err != nil {
-		return models.Media{}, fmt.Errorf("can't do request: %w", err)
+		return models.Media{}, fmt.Errorf("can't put media: %w", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		res := models.Media{ID: id}
-		res.Body, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return models.Media{}, fmt.Errorf("can't read body: %w", err)
-		}
-		return res, nil
+	if resp.StatusCode() == 200 {
+		return models.Media{ID: id, Body: resp.Body}, nil
 	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return models.Media{}, fmt.Errorf("can't read body: %w", err)
+	if resp.JSON404 != nil {
+		return models.Media{}, parseApiError(*resp.JSON404)
 	}
-
-	res := struct {
-		Status  string `json:"status"`
-		ErrData any    `json:"err_data"`
-	}{}
-
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return models.Media{}, fmt.Errorf("can't unmarshal response: %w", err)
-	}
-
-	if res.Status != "OK" {
-		err = requester.ParseError(res.Status, res.ErrData)
-		return models.Media{}, err
-	}
-	panic("unexpected OK status with non 200 Code")
-
+	return models.Media{}, fmt.Errorf("unexpected response")
 }
 
 // Search
 func (c *Client) SearchMemeByBoardID(ctx context.Context, board_id models.MediaID, desc map[string]string) ([]models.Meme, error) {
-
-	req := requester.Request{
-		Method: "GET",
-		Url:    fmt.Sprintf("%s/search/byboard/%s", c.Url, board_id),
-		Body:   desc,
-	}
-	res := []models.Meme{}
-	err := processAndParse(req, &res)
-	if err != nil {
-		return nil, fmt.Errorf("can't read body: %w", err)
-	}
-	return res, nil
+	panic("uni")
 }
 
-func makeJSONReqest(method string, url string, body any) (int, io.Reader, error) {
-	var bodyBytes []byte
-	var err error
-	if body != nil {
-		bodyBytes, err = json.Marshal(body)
-		if err != nil {
-			return 0, nil, fmt.Errorf("can't marshal body: %w", err)
+func convertToModel(meme apiclient.Meme) models.Meme {
+	dsc := map[string]string{}
+	if meme.Description != nil {
+		for k, v := range *meme.Description {
+			dsc[k] = v.(string)
 		}
 	}
-	bodyReader := bytes.NewBuffer(bodyBytes)
-	request, err := http.NewRequest(method, url, bodyReader)
+	m := models.Meme{
+		ID:           models.MemeID(meme.Id),
+		BoardID:      models.BoardID(meme.BoardId),
+		Descriptions: dsc,
+		Filename:     unptr(meme.Filename),
+		CreatedAt:    meme.CreatedAt,
+		UpdatedAt:    meme.UpdatedAt,
+	}
+	return m
+}
+
+func unptr[T any](v *T) (res T) {
+	if v != nil {
+		res = *v
+	}
+	return res
+}
+
+func convertMapToAny(o map[string]string) map[string]any {
+	dsc := map[string]any{}
+	for k, v := range o {
+		dsc[k] = v
+	}
+	return dsc
+}
+
+func createMultipart(fieldName, filename string, data []byte) (*bytes.Buffer, string, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Создаем часть формы для файла
+	part, err := writer.CreateFormFile(fieldName, filename)
 	if err != nil {
-		return 0, nil, fmt.Errorf("can't create request: %w", err)
+		return nil, "", err
 	}
 
-	resp, err := http.DefaultClient.Do(request)
+	// Записываем данные в часть формы
+	_, err = io.Copy(part, bytes.NewReader(data))
 	if err != nil {
-		return 0, nil, fmt.Errorf("can't do request: %w", err)
-	}
-	defer resp.Body.Close()
-	bodyBytes, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return 0, nil, fmt.Errorf("can't read body: %w", err)
+		return nil, "", err
 	}
 
-	return resp.StatusCode, bytes.NewBuffer(bodyBytes), nil
+	// Закрываем writer - это важно для корректного завершения multipart-сообщения
+	err = writer.Close()
+	if err != nil {
+		return nil, "", err
+	}
+
+	return body, writer.FormDataContentType(), nil
 }

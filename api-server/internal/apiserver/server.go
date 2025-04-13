@@ -152,7 +152,7 @@ func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDReques
 		return nil, fmt.Errorf("can't read form: %w", err)
 	}
 
-	files, ok := form.File["file"]
+	files, ok := form.File["media"]
 	if !ok || len(files) == 0 {
 		return nil, &InvalidParamFormatError{ParamName: "form data", Err: fmt.Errorf("no file provided")}
 	}

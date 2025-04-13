@@ -124,6 +124,7 @@ func doAddMedia(r RequestContext) {
 		slog.ErrorContext(ctx, "can't get file bytes",
 			"err", err.Error(),
 			"msg", msg)
+		return
 	}
 
 	id, err := r.ApiClient.PostMeme(ctx, models.Meme{
@@ -135,12 +136,14 @@ func doAddMedia(r RequestContext) {
 		r.SendError("can't create meme")
 		slog.ErrorContext(ctx, "can't create meme",
 			"error", err.Error())
+		return
 	}
 	err = r.ApiClient.PutMedia(ctx, models.Media{ID: models.MediaID(id), Body: media}, filename)
 	if err != nil {
 		r.SendError("can't set media")
 		slog.ErrorContext(ctx, "can't set media",
 			"error", err.Error())
+		return
 	}
 	slog.InfoContext(ctx, "Meme created",
 		"id", id)
