@@ -50,7 +50,7 @@ func doSearchRequest(r RequestContext) {
 	msg := r.Event.Message
 	text := msg.Text
 	slog.InfoContext(ctx, "doSearchRequest")
-	memes, err := r.ApiClient.SearchMemeByBoardID(ctx, "board", map[string]string{"general": text})
+	memes, err := r.ApiClient.SearchMemeByBoardID(ctx, "board", 1, text)
 	if err != nil {
 		slog.ErrorContext(ctx, "can't do serch request",
 			"error", err.Error())

@@ -4,7 +4,7 @@ info:
   description: API for searching meme
   version: 1.0.0
 servers:
-  - url: http://localhost:8091
+  - url: http://localhost:1781
     description: localhost
 
 paths:
@@ -254,6 +254,48 @@ paths:
         '500':
           description: Internal server error
 
+  /search/byboard/{id}:
+    get:
+      tags:
+        - Search
+      summary: Search memes on fixed board
+      operationId: SearchByBoardID
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/sortBy'
+        - in: query
+          name: general
+          schema:
+            type: string
+
+
+      responses:
+        '200':
+          description: List of memes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMemes'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Board not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+
+
+
+
 
 components:
   schemas:
@@ -407,6 +449,15 @@ components:
       name: id
       in: path
       description: ID of the media file
+      required: true
+      schema:
+        type: string
+
+
+    boardId:
+      name: id
+      in: path
+      description: ID of the board
       required: true
       schema:
         type: string

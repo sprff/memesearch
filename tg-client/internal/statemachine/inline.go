@@ -11,7 +11,7 @@ import (
 
 func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 	ctx := r.Ctx
-	memes, err := r.ApiClient.SearchMemeByBoardID(ctx, "board", map[string]string{"general": q.Query})
+	memes, err := r.ApiClient.SearchMemeByBoardID(ctx, "board", 1, q.Query)
 	if err != nil {
 		slog.ErrorContext(ctx, "Can't search", "err", err)
 		return

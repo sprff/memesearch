@@ -241,6 +241,41 @@ func (s ServerImpl) UpdateMemeByID(ctx context.Context, request UpdateMemeByIDRe
 	return UpdateMemeByID200JSONResponse(castMemesFromModel(meme)), nil
 }
 
+// SearchByBoardID implements StrictServerInterface.
+func (s ServerImpl) SearchByBoardID(ctx context.Context, request SearchByBoardIDRequestObject) (SearchByBoardIDResponseObject, error) {
+	//TODO validation pagesize and board
+
+	off, lim := pageToOffset(request.Params.Page, request.Params.PageSize)
+	dsc := genereateDescriptionMap(request.Params)
+	memes, err := s.api.SearchMemeByBoardID(ctx, models.BoardID(request.Id), dsc, off, lim)
+	if err != nil {
+		return nil, fmt.Errorf("can't search: %w", err)
+	}
+	conv := make([]Meme, 0, len(memes))
+	for _, m := range memes {
+		dsc := map[string]any{}
+		for k, v := range m.Descriptions {
+			dsc[k] = v
+		}
+		conv = append(conv, Meme{
+			Id:          string(m.ID),
+			BoardId:     string(m.BoardID),
+			CreatedAt:   m.CreatedAt,
+			Description: &dsc,
+			Filename:    &m.Filename,
+			UpdatedAt:   m.UpdatedAt,
+		})
+	}
+
+	return SearchByBoardID200JSONResponse{
+		Items:    conv,
+		Page:     -1,
+		PageSize: -1,
+		Total:    -1,
+	}, nil
+
+}
+
 func castMemesFromModel(meme models.Meme) Meme {
 	dsc := map[string]any{}
 	for k, v := range meme.Descriptions {
@@ -254,4 +289,28 @@ func castMemesFromModel(meme models.Meme) Meme {
 		UpdatedAt:   meme.UpdatedAt,
 		Description: &dsc,
 	}
+}
+
+const (
+	DefaultPageSize = 20
+)
+
+func pageToOffset(page *int, pageSize *int) (offset int, limit int) {
+	p := 1
+	if page != nil {
+		p = *page
+	}
+	s := DefaultPageSize
+	if pageSize != nil {
+		s = *pageSize
+	}
+	return (p - 1) * s, s
+}
+
+func genereateDescriptionMap(p SearchByBoardIDParams) map[string]string {
+	m := map[string]string{}
+	if p.General != nil {
+		m["general"] = *p.General
+	}
+	return m
 }

@@ -148,8 +148,31 @@ func (c *Client) GetMedia(ctx context.Context, id models.MediaID) (models.Media,
 }
 
 // Search
-func (c *Client) SearchMemeByBoardID(ctx context.Context, board_id models.MediaID, desc map[string]string) ([]models.Meme, error) {
-	panic("uni")
+func (c *Client) SearchMemeByBoardID(ctx context.Context, boardID models.BoardID, page int, general string) ([]models.Meme, error) {
+	req := &apiclient.SearchByBoardIDParams{
+		Page:    &page,
+		General: &general,
+	}
+
+	resp, err := c.api.SearchByBoardIDWithResponse(ctx, apiclient.BoardId(boardID), req)
+	if err != nil {
+		return nil, fmt.Errorf("can't search meme: %w", err)
+	}
+	if resp.JSON200 != nil {
+		memes := make([]models.Meme, 0, len(resp.JSON200.Items))
+		for _, m := range resp.JSON200.Items {
+			memes = append(memes, convertToModel(m))
+		}
+		return memes, nil
+	}
+	if resp.JSON400 != nil {
+		return nil, parseApiError(*resp.JSON404)
+	}
+	if resp.JSON404 != nil {
+		return nil, parseApiError(*resp.JSON404)
+	}
+	return nil, fmt.Errorf("unexpected response")
+
 }
 
 func convertToModel(meme apiclient.Meme) models.Meme {
