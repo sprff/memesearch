@@ -50,9 +50,9 @@ func TestServer(t *testing.T) {
 	ts := getTestServer(t)
 	var id models.MemeID
 	meme := models.Meme{
-		BoardID:      "board1",
-		Filename:     "file.mp4",
-		Descriptions: map[string]string{"subject": "кот", "text": "я кот"},
+		BoardID:     "board1",
+		Filename:    "file.mp4",
+		Description: map[string]string{"subject": "кот", "text": "я кот"},
 	}
 	t.Run("POST /memes", func(t *testing.T) {
 		_, resp, err := makeJSONReqest("POST", fmt.Sprintf("%s/memes", ts.URL), meme)

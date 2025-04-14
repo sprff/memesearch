@@ -111,7 +111,7 @@ func TestMeme(t *testing.T) {
 	meme := models.Meme{
 		BoardID:  "_test_board",
 		Filename: "file.mp4",
-		Descriptions: map[string]string{
+		Description: map[string]string{
 			"subject": "кот",
 			"text":    "я кот",
 		},

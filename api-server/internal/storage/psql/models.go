@@ -17,7 +17,7 @@ type psqlMeme struct {
 }
 
 func convertModelsMeme(m models.Meme) (psqlMeme, error) {
-	data, err := json.Marshal(m.Descriptions)
+	data, err := json.Marshal(m.Description)
 	if err != nil {
 		return psqlMeme{}, fmt.Errorf("can't marshal: %w", err)
 	}
@@ -38,11 +38,11 @@ func convertPsqlMeme(m psqlMeme) (models.Meme, error) {
 		return models.Meme{}, fmt.Errorf("can't unmarshal: %w", err)
 	}
 	return models.Meme{
-		ID:           m.ID,
-		BoardID:      m.BoardID,
-		Filename:     m.Filename,
-		Descriptions: data,
-		CreatedAt:    m.CreatedAt,
-		UpdatedAt:    m.UpdatedAt,
+		ID:          m.ID,
+		BoardID:     m.BoardID,
+		Filename:    m.Filename,
+		Description: data,
+		CreatedAt:   m.CreatedAt,
+		UpdatedAt:   m.UpdatedAt,
 	}, nil
 }

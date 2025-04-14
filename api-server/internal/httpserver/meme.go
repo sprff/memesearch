@@ -22,8 +22,8 @@ func PostMeme(a *apiservice.API) http.HandlerFunc {
 			renderError(w, r, fmt.Errorf("can't read body: %w", err))
 			return
 		}
-		if meme.Descriptions == nil {
-			meme.Descriptions = map[string]string{}
+		if meme.Description == nil {
+			meme.Description = map[string]string{}
 		}
 
 		logger.Debug("Body read", "meme", meme)
@@ -68,8 +68,8 @@ func PutMeme(a *apiservice.API) http.HandlerFunc {
 			return
 		}
 
-		if meme.Descriptions == nil {
-			meme.Descriptions = map[string]string{}
+		if meme.Description == nil {
+			meme.Description = map[string]string{}
 		}
 		meme.ID = id
 

@@ -14,7 +14,7 @@ type ScoreResult struct {
 }
 
 type Engine interface {
-	SearchForBoard(ctx context.Context, id models.BoardID, req map[string]string, offset, limit int) ([]ScoreResult, error)
+	SearchForBoard(ctx context.Context, id models.BoardID, req map[string]string, offset, limit int, sortBy string) ([]ScoreResult, error)
 }
 
 type Searcher struct {
