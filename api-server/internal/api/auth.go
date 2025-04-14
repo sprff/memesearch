@@ -40,3 +40,8 @@ func (a *API) hashPassword(login, password string) string {
 	hash := sha256.Sum256([]byte(str))
 	return base64.RawStdEncoding.EncodeToString(hash[:])
 }
+
+func (a *API) ValidateToken(token string) (models.UserID, error) {
+	//TODO jwt
+	return models.UserID("019634b6d74e7426a26b5f10e3b90f5f"), nil
+}

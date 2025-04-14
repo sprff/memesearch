@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"memesearch/internal/api"
 	"memesearch/internal/apiserver"
+	"memesearch/internal/apiserver/middleware"
 	"memesearch/internal/config"
 	"memesearch/internal/contextlogger"
 	"memesearch/internal/memesearcher"
@@ -22,7 +23,7 @@ func main() {
 	searcher, err := memesearcher.New(cfg)
 	processError("Failed to create searcher", err)
 	api := api.New(s, cfg.Secrets, searcher)
-	server := apiserver.NewHandler(api)
+	server := apiserver.NewHandler(api, []middleware.Middleware{middleware.Logger(), middleware.Auth(api)})
 	slog.Info("Run server", "port", cfg.Server.Port)
 	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port), server)
 	slog.Info("Server stopped", "err", err)

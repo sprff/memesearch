@@ -20,13 +20,14 @@ type ContextHandler struct {
 
 var _ slog.Handler = ContextHandler{}
 
-// Handle adds contextual attributes to the Record before calling the underlying
-// handler
 func (h ContextHandler) Handle(ctx context.Context, r slog.Record) error {
-	if attrs, ok := ctx.Value(slogFields).([]slog.Attr); ok {
-		for _, v := range attrs {
-			r.AddAttrs(v)
+	if attrs, ok := ctx.Value(slogFields).([]slog.Attr); ok && len(attrs) > 0 {
+		args := make([]any, 0, 2*len(attrs))
+		for _, attr := range attrs {
+			args = append(args, attr.Key, attr.Value)
 		}
+		group := slog.Group("context", args...)
+		r.AddAttrs(group)
 	}
 
 	err := h.stdout.Handle(ctx, r)
@@ -72,19 +73,16 @@ func NewContextHandler(fileName string, options *slog.HandlerOptions) (*ContextH
 	}, nil
 }
 
-// AppendCtx adds an slog attribute to the provided context so that it will be
-// included in any Record created with such context
 func AppendCtx(parent context.Context, attr slog.Attr) context.Context {
 	if parent == nil {
 		parent = context.Background()
 	}
 
-	if v, ok := parent.Value(slogFields).([]slog.Attr); ok {
-		v = append(v, attr)
-		return context.WithValue(parent, slogFields, v)
+	var v []slog.Attr
+	if va, ok := parent.Value(slogFields).([]slog.Attr); ok {
+		v = va
 	}
 
-	v := []slog.Attr{}
 	v = append(v, attr)
 	return context.WithValue(parent, slogFields, v)
 }

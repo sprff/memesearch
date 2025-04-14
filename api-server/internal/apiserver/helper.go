@@ -6,11 +6,13 @@ import (
 	"memesearch/internal/api"
 	"memesearch/internal/models"
 	"net/http"
+	"slices"
 )
 
-func NewHandler(api *api.API) http.Handler {
+func NewHandler(api *api.API, middlewares []StrictMiddlewareFunc) http.Handler {
+	slices.Reverse(middlewares)
 	serv := NewServerImpl(api)
-	serverImpl := NewStrictHandlerWithOptions(serv, nil, StrictHTTPServerOptions{
+	serverImpl := NewStrictHandlerWithOptions(serv, middlewares, StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			slog.ErrorContext(r.Context(), "Request Error Handler", "err", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
