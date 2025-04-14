@@ -88,7 +88,7 @@ func (s ServerImpl) GetMemeByID(ctx context.Context, request GetMemeByIDRequestO
 
 // ListMemes implements StrictServerInterface.
 func (s ServerImpl) ListMemes(ctx context.Context, request ListMemesRequestObject) (ListMemesResponseObject, error) {
-	page, pageSize, sortBy, err := request.GetParams(ctx)
+	page, pageSize, sortBy, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
@@ -110,7 +110,7 @@ func (s ServerImpl) ListMemes(ctx context.Context, request ListMemesRequestObjec
 
 // PostMeme implements StrictServerInterface.
 func (s ServerImpl) PostMeme(ctx context.Context, request PostMemeRequestObject) (PostMemeResponseObject, error) {
-	board, filename, dsc, err := request.GetParams(ctx, s.api)
+	board, filename, dsc, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
@@ -192,7 +192,7 @@ func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDReques
 
 // UpdateMemeByID implements StrictServerInterface.
 func (s ServerImpl) UpdateMemeByID(ctx context.Context, request UpdateMemeByIDRequestObject) (UpdateMemeByIDResponseObject, error) {
-	id, dsc, filename, board, err := request.GetParams(ctx, s.api)
+	id, dsc, filename, board, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
@@ -226,7 +226,7 @@ func (s ServerImpl) UpdateMemeByID(ctx context.Context, request UpdateMemeByIDRe
 
 // SearchByBoardID implements StrictServerInterface.
 func (s ServerImpl) SearchByBoardID(ctx context.Context, request SearchByBoardIDRequestObject) (SearchByBoardIDResponseObject, error) {
-	boardID, page, pageSize, sortBy, dsc, err := request.GetParams(ctx, s.api)
+	boardID, page, pageSize, sortBy, dsc, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
@@ -247,25 +247,46 @@ func (s ServerImpl) SearchByBoardID(ctx context.Context, request SearchByBoardID
 
 // AuthLogin implements StrictServerInterface.
 func (s ServerImpl) AuthLogin(ctx context.Context, request AuthLoginRequestObject) (AuthLoginResponseObject, error) {
-	panic("unimplemented")
+	login, password, err := request.GetParams()
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
+	}
+
+	token, err := s.api.LoginUser(ctx, login, password)
+	if err != nil {
+		return nil, fmt.Errorf("can't login: %w", err)
+	}
+
+	return AuthLogin200JSONResponse{Token: token}, nil
 }
 
 // AuthRegister implements StrictServerInterface.
 func (s ServerImpl) AuthRegister(ctx context.Context, request AuthRegisterRequestObject) (AuthRegisterResponseObject, error) {
-	panic("unimplemented")
+	login, password, err := request.GetParams()
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
+	}
+
+	id, err := s.api.PostUser(ctx, login, password)
+	if err != nil {
+		return nil, fmt.Errorf("can't login: %w", err)
+	}
+
+	return AuthRegister200JSONResponse{Id: string(id)}, nil
 }
 
 // AuthWhoami implements StrictServerInterface.
 func (s ServerImpl) AuthWhoami(ctx context.Context, request AuthWhoamiRequestObject) (AuthWhoamiResponseObject, error) {
+	// TODO auth middleware
 	panic("unimplemented")
 }
 
 // GetUserByID implements StrictServerInterface.
 func (s ServerImpl) GetUserByID(ctx context.Context, request GetUserByIDRequestObject) (GetUserByIDResponseObject, error) {
-	panic("unimplemented")
-}
-
-// ListUsers implements StrictServerInterface.
-func (s ServerImpl) ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error) {
-	panic("unimplemented")
+	id := request.Id
+	user, err := s.api.GetUser(ctx, models.UserID(id))
+	if err != nil {
+		return nil, fmt.Errorf("can't get user: %w", err)
+	}
+	return GetUserByID200JSONResponse{Id: string(user.ID), Login: user.Login}, nil
 }

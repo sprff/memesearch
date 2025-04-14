@@ -13,9 +13,9 @@ type User struct {
 }
 
 type UserRepo interface {
-	InsertUser(ctx context.Context, user User) (UserID, error)
+	CreateUser(ctx context.Context, login, password string) (UserID, error)
 	GetUserByID(ctx context.Context, id UserID) (User, error)
-	GetUserByLogin(ctx context.Context, login string) (User, error)
+	LoginUser(ctx context.Context, login, password string) (User, error)
 	UpdateUser(ctx context.Context, user User) error
 	DeleteUser(ctx context.Context, id UserID) error
 }

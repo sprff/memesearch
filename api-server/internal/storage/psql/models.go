@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+type User struct {
+	ID       string `db:"id"`
+	Login    string `db:"login"`
+	Password string `db:"password"`
+}
+
 type psqlMeme struct {
 	ID           models.MemeID  `db:"id"`
 	BoardID      models.BoardID `db:"board_id"`
@@ -45,4 +51,19 @@ func convertPsqlMeme(m psqlMeme) (models.Meme, error) {
 		CreatedAt:   m.CreatedAt,
 		UpdatedAt:   m.UpdatedAt,
 	}, nil
+}
+
+func convertToModelUser(u User) models.User {
+	return models.User{
+		ID:       models.UserID(u.ID),
+		Login:    u.Login,
+		Password: u.Password,
+	}
+}
+func convertToUser(u models.User) User {
+	return User{
+		ID:       string(u.ID),
+		Login:    u.Login,
+		Password: u.Password,
+	}
 }
