@@ -117,3 +117,23 @@ func (m *MemeStore) DeleteMeme(ctx context.Context, id models.MemeID) error {
 	}
 	return nil
 }
+
+func (m *MemeStore) ListMemes(ctx context.Context, request models.ListMemesRequest) ([]models.Meme, error) {
+	var mps []psqlMeme
+	err := m.db.Select(&mps, "SELECT * FROM memes ORDER BY id OFFSET $1 LIMIT $2", request.Offset, request.Limit)
+	if err != nil {
+		return []models.Meme{}, fmt.Errorf("can't select: %w", err)
+	}
+	slog.DebugContext(ctx, "select result", "mps", mps)
+	memes := make([]models.Meme, 0, len(mps))
+	for _, mp := range mps {
+		meme, err := convertPsqlMeme(mp)
+		if err != nil {
+			return []models.Meme{}, fmt.Errorf("can't convert: %w", err)
+		}
+		memes = append(memes, meme)
+	}
+	slog.DebugContext(ctx, "convert result", "memes", mps)
+
+	return memes, nil
+}

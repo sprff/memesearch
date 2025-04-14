@@ -30,12 +30,12 @@ func (s Searcher) GetMemeEngine(memeEngine string) Engine {
 }
 
 func New(cfg config.Config) (Searcher, error) {
-	memeStroe, err := psql.NewMemeStore(cfg.Database)
+	memeStore, err := psql.NewMemeStore(cfg.Database)
 	if err != nil {
 		return Searcher{}, fmt.Errorf("can't create memestore: %w", err)
 	}
 	memeEngines := map[string]Engine{
-		"default": newDefault(memeStroe),
+		"default": newDefault(memeStore),
 	}
 	return Searcher{memeEngines: memeEngines, defaultMemeEngine: "default"}, nil
 }

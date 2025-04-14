@@ -57,14 +57,22 @@ func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) error {
 	logger.InfoContext(ctx, "Started", "id", id)
 
 	err := a.storage.DeleteMeme(ctx, id)
-	switch {
-	case errors.Is(err, models.ErrMemeNotFound):
-		return ErrMemeNotFound
-	default:
-		return fmt.Errorf("can't delete meme: %w", err)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrMemeNotFound):
+			return ErrMemeNotFound
+		default:
+			return fmt.Errorf("can't delete meme: %w", err)
+		}
 	}
+	return nil
 }
 
 func (a *API) ListMemes(ctx context.Context, offset, limit int, sortBy string) ([]models.Meme, error) {
-	panic("unimplemented")
+	memes, err := a.storage.ListMemes(ctx, models.ListMemesRequest{Offset: offset, Limit: limit, SortBy: sortBy})
+	if err != nil {
+		return nil, fmt.Errorf("can't list memes: %w", err)
+	}
+
+	return memes, nil
 }
