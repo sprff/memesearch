@@ -17,17 +17,17 @@ func (e Error) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return (t.Code == "" || t.Code == e.Code) &&
+	return (t.Id == "" || t.Id == e.Id) &&
 		(t.Message == "" || t.Message == e.Message) &&
 		(t.Body == nil || (e.Body != nil && reflect.DeepEqual(*t.Body, *e.Body)))
 
 }
 
-var ErrMemeNotFound = Error{Code: "MEME_NOT_FOUND", Message: "Can't find meme"}
-var ErrMediaNotFound = Error{Code: "MEDIA_NOT_FOUND", Message: "Can't find media"}
-var ErrTooLarge = Error{Code: "FILE_TOO_LARGE", Message: "Request body too large"}
-var ErrInvalidPagination = Error{Code: "INVALID_PAGINATION", Message: "Some of requrements doesn't meet page>=1;1<=pagesize<=100"}
-var ErrUnsupportedMediaType = Error{Code: "UNSUPPORTED_MEDIA_TYPE", Message: "Unsupported media type"}
+var ErrMemeNotFound = Error{Id: "MEME_NOT_FOUND", Message: "Can't find meme"}
+var ErrMediaNotFound = Error{Id: "MEDIA_NOT_FOUND", Message: "Can't find media"}
+var ErrTooLarge = Error{Id: "FILE_TOO_LARGE", Message: "Request body too large"}
+var ErrInvalidPagination = Error{Id: "INVALID_PAGINATION", Message: "Some of requrements doesn't meet page>=1;1<=pagesize<=100"}
+var ErrUnsupportedMediaType = Error{Id: "UNSUPPORTED_MEDIA_TYPE", Message: "Unsupported media type"}
 
 func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	ctx := r.Context()
@@ -49,7 +49,7 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.As(err, &invalidParam):
 
 		b := map[string]any{invalidParam.ParamName: invalidParam.Err.Error()}
-		body, err := json.Marshal(Error{Code: "INVALID_REQUEST", Body: &b})
+		body, err := json.Marshal(Error{Id: "INVALID_REQUEST", Body: &b})
 		if err != nil {
 			slog.ErrorContext(ctx, "Can't marshall json", "err", err)
 		}

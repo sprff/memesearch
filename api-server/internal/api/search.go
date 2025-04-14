@@ -7,12 +7,12 @@ import (
 	"memesearch/internal/models"
 )
 
-func (a *API) SearchMemeByBoardID(ctx context.Context, id models.BoardID, req map[string]string, offset, limit int) ([]models.Meme, error) {
+func (a *API) SearchMemeByBoardID(ctx context.Context, id models.BoardID, dsc map[string]string, offset, limit int, sortBy string) ([]models.Meme, error) {
 	logger := slog.Default().With("from", "API.SearchMemeByBoardID")
 	logger.InfoContext(ctx, "Started")
 
 	engine := a.searcher.GetMemeEngine("")
-	scores, err := engine.SearchForBoard(ctx, id, req, offset, limit)
+	scores, err := engine.SearchForBoard(ctx, id, dsc, offset, limit, sortBy)
 	if err != nil {
 		return nil, fmt.Errorf("can't search for board: %w", err)
 	}

@@ -22,8 +22,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiInfo'
-        '500':
-          description: Internal server error
 
   /memes:
     get:
@@ -49,8 +47,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
 
     post:
       tags:
@@ -63,7 +59,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MemeCreate'
+              type: object
+              required:
+                - board_id
+                - filename
+                - description
+              properties:
+                board_id:
+                  type: string
+                  example: "d290f1ee6c544b0190e6d701748f0851"
+                filename:
+                  type: string
+                  example: "file.mp4"
+                description:
+                  type: object
       responses:
         '201':
           description: Meme created successfully
@@ -83,8 +92,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
 
   /memes/{id}:
     get:
@@ -108,8 +115,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
 
     put:
       tags:
@@ -124,7 +129,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MemeUpdate'
+              type: object
+              properties:
+                board_id:
+                  type: string
+                  example: "d290f1ee6c544b0190e6d701748f0851"
+                filename:
+                  type: string
+                  example: "file.mp4"
+                description:
+                  type: object
       responses:
         '200':
           description: Meme updated successfully
@@ -144,8 +158,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
 
 
     delete:
@@ -165,9 +177,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-
 
   /media/{id}:
     put:
@@ -209,9 +218,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-
 
     get:
       tags:
@@ -251,8 +257,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
 
   /search/byboard/{id}:
     get:
@@ -269,15 +273,13 @@ paths:
           name: general
           schema:
             type: string
-
-
       responses:
         '200':
           description: List of memes
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedMemes'
+                $ref: '#/components/schemas/ScoredMemes'
         '400':
           description: Bad request
           content:
@@ -290,37 +292,160 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
 
+  /users:
+    get:
+      security:
+        - Bearer: []
+      tags:
+        - Users
+      summary: List all user
+      operationId: ListUsers
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          description: Have no rights to see user list
+        '401':
+          description: Unauthorized
 
+  /users/{id}:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      security:
+        - Bearer: ["asss"]
+      tags:
+        - Users
+      summary: Get user
+      operationId: GetUserByID
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+        '403':
+          description: Have no rights to see user
+        '401':
+          description: Unauthorized
+    #TODO put
+    #TODO delete
+
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Registers user
+      operationId: AuthRegister
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login user
+      operationId: AuthLogin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: User logined
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - token
+                properties:
+                  token:
+                    type: string
+        '404':
+          description: Wrong login or password
+
+  /auth/whoami:
+    post:
+      tags:
+        - Auth
+      security:
+        - Bearer: []
+
+      summary: Get user by token
+      operationId: AuthWhoami
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Wrong token
 
 
 
 components:
   schemas:
-    ApiInfo:
-      type: object
-      required:
-        - apiName
-        - version
-        - description
-      properties:
-        apiName:
-          type: string
-          example: Meme Search API
-        version:
-          type: string
-          example: 1.0.0
-        description:
-          type: string
-          example: API for managing internet memes and related media
 
     Meme:
       type: object
       required:
         - id
         - board_id
+        - filename
+        - description
         - created_at
         - updated_at
       properties:
@@ -341,69 +466,92 @@ components:
         updated_at:
           type: string
           format: date-time
-
-    MemeCreate:
+    User:
       type: object
       required:
-        - board_id
+        - id
+        - login
       properties:
-        board_id:
+        id:
           type: string
-          example: "d290f1ee6c544b0190e6d701748f0851"
-        filename:
+          example: "user_id"
+        login:
           type: string
-          example: "file.mp4"
-        description:
+          example: "user_login"
+
+    MemeScore:
+      $ref: '#/components/schemas/Meme'
+
+    Error:
+      type: object
+      required:
+        - id
+        - message
+      properties:
+        id:
+          type: string
+          example: "SOME_ID"
+        message:
+          type: string
+          example: "Human readable error"
+        body:
           type: object
 
-    MemeUpdate:
-      type: object
-      properties:
-        board_id:
-          type: string
-          example: "d290f1ee6c544b0190e6d701748f0851"
-        filename:
-          type: string
-          example: "file.mp4"
-        description:
-          type: object
 
     PaginatedMemes:
       type: object
       required:
         - items
-        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Meme'
+
+    ScoredMemes:
+      type: object
+      required:
+        - items
         - page
         - pageSize
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Meme'
-        total:
-          type: integer
-          example: 100
-        page:
-          type: integer
-          example: 1
-        pageSize:
-          type: integer
-          example: 10
+            $ref: '#/components/schemas/MemeScore'
 
-    Error:
+
+    UserCreate:
+      type: object
+      properties:
+        login:
+          type: string
+          example: "login"
+    UserUpdate:
+      type: object
+      properties:
+        login:
+          type: string
+          example: "new_login"
+
+    ApiInfo:
       type: object
       required:
-        - code
-        - message
+        - apiName
+        - version
+        - description
       properties:
-        code:
+        apiName:
           type: string
-          example: "MEDIA_NOT_FOUND"
-        message:
+          example: Meme Search API
+        version:
           type: string
-          example: "The requested media was not found"
-        body:
-          type: object
+          example: 1.0.0
+        description:
+          type: string
+          example: API for managing internet memes and related media
+
+
 
   parameters:
     page:
@@ -423,7 +571,7 @@ components:
       required: false
       schema:
         type: integer
-        default: 10
+        default: 20
         minimum: 1
         maximum: 100
 
@@ -453,11 +601,18 @@ components:
       schema:
         type: string
 
-
     boardId:
       name: id
       in: path
       description: ID of the board
+      required: true
+      schema:
+        type: string
+
+    userId:
+      name: id
+      in: path
+      description: ID of the user
       required: true
       schema:
         type: string

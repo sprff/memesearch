@@ -64,3 +64,7 @@ func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) error {
 		return fmt.Errorf("can't delete meme: %w", err)
 	}
 }
+
+func (a *API) ListMemes(ctx context.Context, offset, limit int, sortBy string) ([]models.Meme, error) {
+	panic("unimplemented")
+}

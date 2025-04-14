@@ -83,56 +83,39 @@ func (s ServerImpl) GetMemeByID(ctx context.Context, request GetMemeByIDRequestO
 	case err != nil:
 		return nil, fmt.Errorf("can't get meme")
 	}
-	return GetMemeByID200JSONResponse(castMemesFromModel(meme)), nil
+	return GetMemeByID200JSONResponse(convertMemeToServer(meme)), nil
 }
 
 // ListMemes implements StrictServerInterface.
 func (s ServerImpl) ListMemes(ctx context.Context, request ListMemesRequestObject) (ListMemesResponseObject, error) {
-	page := 1
-	pageSize := 10
-
-	if request.Params.Page != nil {
-		page = *request.Params.Page
-	}
-	if request.Params.PageSize != nil {
-		pageSize = *request.Params.PageSize
+	page, pageSize, sortBy, err := request.GetParams(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	if page < 1 || pageSize < 1 || pageSize > 100 {
-		return nil, ErrInvalidPagination
+	memes, err := s.api.ListMemes(ctx, (page-1)*pageSize, pageSize, sortBy)
+	if err != nil {
+		return nil, fmt.Errorf("can't list memes: %w", err)
 	}
 
-	//TODO sortBy
+	conv := make([]Meme, 0, len(memes))
+	for _, m := range memes {
+		conv = append(conv, convertMemeToServer(m))
+	}
 
 	return ListMemes200JSONResponse{
-		Items:    []Meme{},
-		Page:     page,
-		PageSize: pageSize,
-		Total:    -1,
+		Items: conv,
 	}, nil
 }
 
 // PostMeme implements StrictServerInterface.
 func (s ServerImpl) PostMeme(ctx context.Context, request PostMemeRequestObject) (PostMemeResponseObject, error) {
-	if request.Body == nil {
-		return nil, &InvalidParamFormatError{ParamName: "body", Err: fmt.Errorf("empty body")}
+	board, filename, dsc, err := request.GetParams(ctx, s.api)
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	meme := models.Meme{BoardID: models.BoardID(request.Body.BoardId)}
-	if request.Body.Description != nil {
-		dscs := map[string]string{}
-		for k, va := range *request.Body.Description {
-			v, ok := va.(string)
-			if !ok {
-				return nil, &InvalidParamFormatError{ParamName: "description", Err: fmt.Errorf("description must be map[string]string")}
-			}
-			dscs[k] = v
-		}
-		meme.Descriptions = dscs
-	}
-	if request.Body.Filename != nil {
-		meme.Filename = *request.Body.Filename
-	}
+	meme := models.Meme{BoardID: board, Filename: filename, Description: dsc}
 
 	id, err := s.api.CreateMeme(ctx, meme)
 	if err != nil {
@@ -144,6 +127,7 @@ func (s ServerImpl) PostMeme(ctx context.Context, request PostMemeRequestObject)
 
 // PutMediaByID implements StrictServerInterface.
 func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDRequestObject) (PutMediaByIDResponseObject, error) {
+	// TODO prettyfiy put media
 	form, err := request.Body.ReadForm(18 * 1024 * 1024) // 18MB limit
 	if err != nil {
 		if err == multipart.ErrMessageTooLarge {
@@ -208,109 +192,80 @@ func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDReques
 
 // UpdateMemeByID implements StrictServerInterface.
 func (s ServerImpl) UpdateMemeByID(ctx context.Context, request UpdateMemeByIDRequestObject) (UpdateMemeByIDResponseObject, error) {
-	meme := models.Meme{ID: models.MemeID(request.Id)}
-	if request.Body.Description != nil {
-		dscs := map[string]string{}
-		for k, va := range *request.Body.Description {
-			v, ok := va.(string)
-			if !ok {
-				return nil, &InvalidParamFormatError{ParamName: "description", Err: fmt.Errorf("description must be map[string]string")}
-			}
-			dscs[k] = v
-		}
-		meme.Descriptions = dscs
-	}
-	if request.Body.Filename != nil {
-		meme.Filename = *request.Body.Filename
-	}
-	if request.Body.BoardId != nil {
-		meme.BoardID = models.BoardID(*request.Body.BoardId)
+	id, dsc, filename, board, err := request.GetParams(ctx, s.api)
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	err := s.api.UpdateMeme(ctx, meme)
-	if err != nil {
-		if errors.Is(err, api.ErrMemeNotFound) {
-			return nil, ErrMemeNotFound
-		}
-		return nil, fmt.Errorf("can't update meme: %w", err)
-	}
-	meme, err = s.api.GetMemeByID(ctx, models.MemeID(request.Id))
+	meme, err := s.api.GetMemeByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("can't get meme: %w", err)
 	}
-	return UpdateMemeByID200JSONResponse(castMemesFromModel(meme)), nil
+	if dsc != nil {
+		meme.Description = *dsc
+	}
+	if filename != nil {
+		meme.Filename = *filename
+	}
+	if board != nil {
+		meme.BoardID = *board
+	}
+
+	err = s.api.UpdateMeme(ctx, meme)
+	if err != nil {
+		return nil, fmt.Errorf("can't update meme: %w", err)
+	}
+
+	meme, err = s.api.GetMemeByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("can't get meme: %w", err)
+	}
+
+	return UpdateMemeByID200JSONResponse(convertMemeToServer(meme)), nil
 }
 
 // SearchByBoardID implements StrictServerInterface.
 func (s ServerImpl) SearchByBoardID(ctx context.Context, request SearchByBoardIDRequestObject) (SearchByBoardIDResponseObject, error) {
-	//TODO validation pagesize and board
+	boardID, page, pageSize, sortBy, dsc, err := request.GetParams(ctx, s.api)
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
+	}
 
-	off, lim := pageToOffset(request.Params.Page, request.Params.PageSize)
-	dsc := genereateDescriptionMap(request.Params)
-	memes, err := s.api.SearchMemeByBoardID(ctx, models.BoardID(request.Id), dsc, off, lim)
+	memes, err := s.api.SearchMemeByBoardID(ctx, boardID, dsc, (page-1)*pageSize, pageSize, sortBy)
 	if err != nil {
 		return nil, fmt.Errorf("can't search: %w", err)
 	}
+
 	conv := make([]Meme, 0, len(memes))
 	for _, m := range memes {
-		dsc := map[string]any{}
-		for k, v := range m.Descriptions {
-			dsc[k] = v
-		}
-		conv = append(conv, Meme{
-			Id:          string(m.ID),
-			BoardId:     string(m.BoardID),
-			CreatedAt:   m.CreatedAt,
-			Description: &dsc,
-			Filename:    &m.Filename,
-			UpdatedAt:   m.UpdatedAt,
-		})
+		conv = append(conv, convertMemeToServer(m))
 	}
 
-	return SearchByBoardID200JSONResponse{
-		Items:    conv,
-		Page:     -1,
-		PageSize: -1,
-		Total:    -1,
-	}, nil
+	return SearchByBoardID200JSONResponse{Items: conv}, nil
 
 }
 
-func castMemesFromModel(meme models.Meme) Meme {
-	dsc := map[string]any{}
-	for k, v := range meme.Descriptions {
-		dsc[k] = v
-	}
-	return Meme{
-		Id:          string(meme.ID),
-		BoardId:     string(meme.BoardID),
-		Filename:    &meme.Filename, //TODO emptyfilename?
-		CreatedAt:   meme.CreatedAt,
-		UpdatedAt:   meme.UpdatedAt,
-		Description: &dsc,
-	}
+// AuthLogin implements StrictServerInterface.
+func (s ServerImpl) AuthLogin(ctx context.Context, request AuthLoginRequestObject) (AuthLoginResponseObject, error) {
+	panic("unimplemented")
 }
 
-const (
-	DefaultPageSize = 20
-)
-
-func pageToOffset(page *int, pageSize *int) (offset int, limit int) {
-	p := 1
-	if page != nil {
-		p = *page
-	}
-	s := DefaultPageSize
-	if pageSize != nil {
-		s = *pageSize
-	}
-	return (p - 1) * s, s
+// AuthRegister implements StrictServerInterface.
+func (s ServerImpl) AuthRegister(ctx context.Context, request AuthRegisterRequestObject) (AuthRegisterResponseObject, error) {
+	panic("unimplemented")
 }
 
-func genereateDescriptionMap(p SearchByBoardIDParams) map[string]string {
-	m := map[string]string{}
-	if p.General != nil {
-		m["general"] = *p.General
-	}
-	return m
+// AuthWhoami implements StrictServerInterface.
+func (s ServerImpl) AuthWhoami(ctx context.Context, request AuthWhoamiRequestObject) (AuthWhoamiResponseObject, error) {
+	panic("unimplemented")
+}
+
+// GetUserByID implements StrictServerInterface.
+func (s ServerImpl) GetUserByID(ctx context.Context, request GetUserByIDRequestObject) (GetUserByIDResponseObject, error) {
+	panic("unimplemented")
+}
+
+// ListUsers implements StrictServerInterface.
+func (s ServerImpl) ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error) {
+	panic("unimplemented")
 }
