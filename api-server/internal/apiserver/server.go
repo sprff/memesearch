@@ -116,12 +116,12 @@ func (s ServerImpl) PostMeme(ctx context.Context, request PostMemeRequestObject)
 // PutMediaByID implements StrictServerInterface.
 func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDRequestObject) (PutMediaByIDResponseObject, error) {
 	// TODO prettyfiy put media
-	form, err := request.Body.ReadForm(18 * 1024 * 1024) // 18MB limit
+	form, err := request.Body.ReadForm(20 * 1024 * 1024)
 	if err != nil {
 		if err == multipart.ErrMessageTooLarge {
 			return nil, invalidInput("body", "body is too big")
 		}
-		return nil, fmt.Errorf("can't read form: %w", err)
+		return nil, invalidInput("form", "%s", err.Error())
 	}
 
 	files, ok := form.File["media"]

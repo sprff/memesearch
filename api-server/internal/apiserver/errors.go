@@ -38,7 +38,7 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 		errors.Is(err, api.ErrBoardNotFound):
 
 		w.WriteHeader(http.StatusNotFound)
-		resultErr = Error{Id: err.Error()}
+		resultErr = Error{Id: unwrapErr(err).Error()}
 
 	case errors.As(err, &invalidParam):
 		b := map[string]any{invalidParam.ParamName: invalidParam.Err.Error()}
@@ -56,5 +56,17 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 		slog.ErrorContext(ctx, "Can't marshall json", "err", err)
 	}
 	w.Write(body)
+}
 
+func unwrapErr(err error) error {
+	type u interface {
+		Unwrap() error
+	}
+	for {
+		nerr, ok := err.(u)
+		if !ok {
+			return err
+		}
+		err = nerr.Unwrap()
+	}
 }
