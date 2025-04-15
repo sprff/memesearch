@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"memesearch/internal/api"
+	"memesearch/internal/apiserver/middleware"
 	"memesearch/internal/models"
 	"mime/multipart"
 	"net/http"
@@ -277,8 +278,18 @@ func (s ServerImpl) AuthRegister(ctx context.Context, request AuthRegisterReques
 
 // AuthWhoami implements StrictServerInterface.
 func (s ServerImpl) AuthWhoami(ctx context.Context, request AuthWhoamiRequestObject) (AuthWhoamiResponseObject, error) {
-	// TODO auth middleware
-	panic("unimplemented")
+	id := middleware.GetAuthUserID(ctx)
+	if id == "" {
+		return AuthWhoami401Response{}, nil
+	}
+	user, err := s.api.GetUser(ctx, models.UserID(id))
+	if err != nil {
+		if err == api.ErrUserNotFound {
+			return AuthWhoami401Response{}, nil
+		}
+		return nil, fmt.Errorf("can't get user: %w", err)
+	}
+	return AuthWhoami200JSONResponse{Id: string(user.ID), Login: user.Login}, nil
 }
 
 // GetUserByID implements StrictServerInterface.

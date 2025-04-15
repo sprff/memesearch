@@ -29,7 +29,7 @@ func New(cfg config.Config) (s Storage, err error) {
 	if err != nil {
 		return Storage{}, fmt.Errorf("can't load meme store: %w", err)
 	}
-	s.MediaRepo, err = s3.NewMediaStore(context.TODO(), cfg.S3)
+	s.MediaRepo, err = s3.NewMediaStore(context.Background(), cfg.S3)
 	if err != nil {
 		return Storage{}, fmt.Errorf("can't load media store: %w", err)
 	}

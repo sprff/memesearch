@@ -54,6 +54,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.27
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.58.3
 	github.com/go-chi/render v1.0.3
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lib/pq v1.10.9
 	github.com/stretchr/testify v1.10.0

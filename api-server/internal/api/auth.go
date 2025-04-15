@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 	"memesearch/internal/models"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func (a *API) LoginUser(ctx context.Context, login string, password string) (string, error) {
@@ -18,9 +21,15 @@ func (a *API) LoginUser(ctx context.Context, login string, password string) (str
 		}
 		return "", fmt.Errorf("can't login: %w", err)
 	}
+	token, err := a.generateToken(user)
+	if err != nil {
+		return "", fmt.Errorf("can't generate token: %w", err)
+	}
 	slog.InfoContext(ctx, "Successful login",
-		"login", login)
-	return string(user.ID), nil
+		"login", login,
+		"token", token)
+
+	return token, nil
 }
 
 func (a *API) Whoami(ctx context.Context, token string) (models.User, error) {
@@ -41,7 +50,45 @@ func (a *API) hashPassword(login, password string) string {
 	return base64.RawStdEncoding.EncodeToString(hash[:])
 }
 
-func (a *API) ValidateToken(token string) (models.UserID, error) {
-	//TODO jwt
-	return models.UserID("019634b6d74e7426a26b5f10e3b90f5f"), nil
+type Claims struct {
+	UserID models.UserID `json:"user_id"`
+	jwt.RegisteredClaims
+}
+
+func (a *API) generateToken(u models.User) (string, error) {
+	claims := Claims{
+		UserID: u.ID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(a.secrets.JwtCode))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+// ValidateToken проверяет JWT токен и возвращает UserID если токен валиден
+func (a *API) ValidateToken(tokenString string) (models.UserID, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidToken
+		}
+		return []byte(a.secrets.JwtCode), nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+		return claims.UserID, nil
+	}
+
+	return "", ErrInvalidToken
 }

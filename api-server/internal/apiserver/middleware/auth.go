@@ -20,7 +20,7 @@ func Auth(a *api.API) func(f strictnethttp.StrictHTTPHandlerFunc, operationID st
 				token := auth[7:]
 				userID, err := a.ValidateToken(token)
 				if err == nil {
-					ctx := context.WithValue(r.Context(), contextKey("user_id"), userID)
+					ctx := context.WithValue(r.Context(), contextKey("user_id"), string(userID))
 					ctx = contextlogger.AppendCtx(ctx, slog.String("user_id", string(userID)))
 					*r = *r.WithContext(ctx)
 					slog.DebugContext(ctx, "Authorized")
@@ -32,4 +32,9 @@ func Auth(a *api.API) func(f strictnethttp.StrictHTTPHandlerFunc, operationID st
 		}
 	}
 
+}
+
+func GetAuthUserID(ctx context.Context) string {
+	s, _ := ctx.Value(contextKey("user_id")).(string)
+	return s
 }

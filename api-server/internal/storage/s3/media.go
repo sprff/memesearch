@@ -26,7 +26,6 @@ func NewMediaStore(ctx context.Context, cfg config.S3Config) (*MediaStore, error
 }
 
 func (s *MediaStore) GetMediaByID(ctx context.Context, id models.MediaID) (models.Media, error) {
-	//TODO add ErrNoMediaFound
 	media, err := s.client.GetObject(ctx, string(id))
 	if err != nil {
 		return models.Media{}, fmt.Errorf("can't get object: %w", err)

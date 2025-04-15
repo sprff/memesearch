@@ -34,6 +34,5 @@ func Logger() func(f strictnethttp.StrictHTTPHandlerFunc, operationID string) st
 
 			return res, err
 		}
-
 	}
 }
