@@ -13,8 +13,9 @@ type Board struct {
 }
 
 type BoardRepo interface {
-	InsertBoard(ctx context.Context, board Board) (BoardID, error)
+	CreateBoard(ctx context.Context, owner UserID, name string) (Board, error)
 	GetBoardByID(ctx context.Context, id BoardID) (Board, error)
 	UpdateBoard(ctx context.Context, board Board) error
 	DeleteBoard(ctx context.Context, id BoardID) error
+	ListBoards(ctx context.Context, offset, limit int, sortBy string) ([]Board, error) 
 }

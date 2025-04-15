@@ -70,6 +70,30 @@ func convertMapToAny(m map[string]string) map[string]any {
 	return dsc
 }
 
+func convertBoardToModel(m Board) models.Board {
+	return models.Board{
+		ID:    models.BoardID(m.Id),
+		Owner: models.UserID(m.Owner),
+		Name:  m.Name,
+	}
+}
+
+func convertBoardToServer(m models.Board) Board {
+	return Board{
+		Id:    string(m.ID),
+		Owner: string(m.Owner),
+		Name:  m.Name,
+	}
+}
+
+func convertBoardListToServer(ms []models.Board) []Board {
+	res := make([]Board, len(ms))
+	for i, m := range ms {
+		res[i] = convertBoardToServer(m)
+	}
+	return res
+}
+
 func invalidInput(parametr, message string, args ...any) error {
 	return &InvalidParamFormatError{ParamName: parametr, Err: fmt.Errorf(message, args...)}
 }

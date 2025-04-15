@@ -8,4 +8,5 @@ var (
 	ErrMediaNotFound = errors.New("MEDIA_NOT_FOUND")
 	ErrMemeNotFound  = errors.New("MEME_NOT_FOUND")
 	ErrInvalidToken  = errors.New("INVALID_TOKEN")
+	ErrForbidden     = errors.New("FORBIDDEN")
 )

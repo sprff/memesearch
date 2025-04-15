@@ -139,7 +139,6 @@ func (r PostMemeRequestObject) GetParams() (
 		return
 	}
 	return
-
 }
 
 func validateLogin(login string) error {
@@ -171,9 +170,7 @@ func (r AuthLoginRequestObject) GetParams() (
 	}
 
 	password = r.Body.Password
-
 	return
-
 }
 
 func (r AuthRegisterRequestObject) GetParams() (
@@ -192,5 +189,60 @@ func (r AuthRegisterRequestObject) GetParams() (
 		return
 	}
 	return
+}
 
+func (r PostBoardRequestObject) GetParams() (
+	name string, owner models.UserID, err error) {
+	name = r.Body.Name
+	if len(name) < 3 || 30 < len(name) {
+		err = invalidInput("name", "name length should be [3;30]")
+		return
+	}
+	owner = models.UserID(r.Body.Owner)
+	return
+}
+
+func (r UpdateBoardByIDRequestObject) GetParams() (
+	id models.BoardID, name *string, owner *models.UserID, err error) {
+	id = models.BoardID(r.Id)
+	name = r.Body.Name
+	if name != nil && (len(*name) < 3 || 30 < len(*name)) {
+		err = invalidInput("name", "name length should be [3;30]")
+		return
+	}
+	if r.Body.Owner != nil {
+		owner = ptr(models.UserID(*r.Body.Owner))
+	}
+	return
+}
+func (r ListBoardsRequestObject) GetParams() (
+	page, pageSize int, sortBy string, err error) {
+	page = DefaultPage
+	pageSize = DefaultPageSize
+	sortBy = DefaultSortBy
+
+	if r.Params.Page != nil {
+		page = *r.Params.Page
+	}
+	if page < 1 {
+		err = invalidInput("page", "must be page>=1")
+		return
+	}
+
+	if r.Params.PageSize != nil {
+		pageSize = *r.Params.PageSize
+	}
+	if pageSize < 1 || pageSize > 100 {
+		err = invalidInput("pageSize", "must be 1 <= pageSize <= 100")
+		return
+	}
+
+	if r.Params.SortBy != nil {
+		sortBy = string(*r.Params.SortBy)
+	}
+	if !slices.Contains(AllowedSortBy, sortBy) {
+		err = invalidInput("sortBy", "sortBy must be one of %v", AllowedSortBy)
+		return
+	}
+	return
 }

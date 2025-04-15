@@ -40,15 +40,18 @@ func (b *BoardStore) GetBoardByID(ctx context.Context, id models.BoardID) (model
 	return board, nil
 }
 
-// InsertBoard implements models.BoardRepo.
-func (b *BoardStore) InsertBoard(ctx context.Context, board models.Board) (models.BoardID, error) {
-	board.ID = models.BoardID(utils.GenereateUUIDv7())
-	_, err := b.db.Exec("INSERT INTO boards (id, owner_id, name) VALUES ($1, $2, $3)", board.ID, board.Owner, board.Name)
+// CreateBoard implements models.BoardRepo.
+func (b *BoardStore) CreateBoard(ctx context.Context, owner models.UserID, name string) (models.Board, error) {
+	id := models.BoardID(utils.GenereateUUIDv7())
+	_, err := b.db.Exec("INSERT INTO boards (id, owner_id, name) VALUES ($1, $2, $3)", id, owner, name)
 	if err != nil {
-		return "", fmt.Errorf("can't insert: %w", err)
+		return models.Board{}, fmt.Errorf("can't insert: %w", err)
 	}
-	return board.ID, nil
-
+	board, err := b.GetBoardByID(ctx, id)
+	if err != nil {
+		return models.Board{}, fmt.Errorf("can't select: %w", err)
+	}
+	return board, nil
 }
 
 // UpdateBoard implements models.BoardRepo.
@@ -81,4 +84,15 @@ func (b *BoardStore) DeleteBoard(ctx context.Context, id models.BoardID) error {
 		return models.ErrBoardNotFound
 	}
 	return nil
+}
+
+// ListBoards implements models.BoardRepo.
+func (b *BoardStore) ListBoards(ctx context.Context, offset int, limit int, sortBy string) ([]models.Board, error) {
+	var boards []models.Board
+	err := b.db.SelectContext(ctx, &boards, "SELECT * FROM boards OFFSET $1 LIMIT $2", offset, limit)
+	if err != nil {
+		return nil, fmt.Errorf("can't select: %w", err)
+
+	}
+	return boards, nil
 }

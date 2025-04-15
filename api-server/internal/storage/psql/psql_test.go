@@ -35,7 +35,8 @@ func TestBoard(t *testing.T) {
 	var id models.BoardID
 
 	t.Run("Insert board", func(t *testing.T) {
-		id, err = store.InsertBoard(ctx, board)
+		b, err := store.CreateBoard(ctx, "test_owner", "test")
+		id = b.ID
 		require.NoError(t, err)
 		board.ID = id
 	})

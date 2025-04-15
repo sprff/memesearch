@@ -74,7 +74,7 @@ paths:
                 description:
                   type: object
       responses:
-        '201':
+        '200':
           description: Meme created successfully
           content:
             application/json:
@@ -169,7 +169,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/memeId'
       responses:
-        '204':
+        '200':
           description: Meme deleted successfully
         '404':
           description: Meme not found
@@ -323,7 +323,7 @@ paths:
       operationId: GetUserByID
       responses:
         '200':
-          description: List of users
+          description: Requested user
           content:
             application/json:
               schema:
@@ -334,8 +334,53 @@ paths:
           description: Have no rights to see user
         '401':
           description: Unauthorized
-    #TODO put
-    #TODO delete
+    # put:
+    #   parameters:
+    #     - $ref: '#/components/parameters/userId'
+    #   tags:
+    #     - Users
+    #   summary: Update user
+    #   operationId: UpdateUserByID
+    #   requestBody:
+    #     required: true
+    #     content:
+    #       application/json:
+    #         schema:
+    #           type: object
+    #           properties:
+    #             login:
+    #               type: string
+    #             password:
+    #               type: string
+    #   responses:
+    #     '200':
+    #       description: Updated user
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/User'
+    #     '404':
+    #       description: User not found
+    #     '403':
+    #       description: Have no rights to update user
+    #     '401':
+    #       description: Unauthorized
+    # delete:
+    #   parameters:
+    #     - $ref: '#/components/parameters/userId'
+    #   tags:
+    #     - Users
+    #   summary: Delete user
+    #   operationId: DeleteUserByID
+    #   responses:
+    #     '200':
+    #       description: User deleted
+    #     '404':
+    #       description: User not found
+    #     '403':
+    #       description: Have no rights to update user
+    #     '401':
+    #       description: Unauthorized
 
   /auth/register:
     post:
@@ -425,7 +470,129 @@ paths:
         '401':
           description: Wrong token
 
+  /boards:
+    post:
+      tags:
+        - Board
+      summary: Create new board
+      operationId: PostBoard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - owner
+                - name
+              properties:
+                owner:
+                  type: string
+                name:
+                  type: string
 
+      responses:
+        '200':
+          description: Board created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '401':
+          description: Unauthorized
+
+    get:
+      tags:
+        - Board
+      summary: Get available boards
+      operationId: ListBoards
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/sortBy'
+      responses:
+        '200':
+          description: Boards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Board'
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to get board
+        '401':
+          description: Unauthorized
+  /boards/{id}:
+    get:
+      tags:
+        - Board
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Get board
+      operationId: GetBoardByID
+      responses:
+        '200':
+          description: Board
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to get board
+        '401':
+          description: Unauthorized
+    put:
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Update board
+      operationId: UpdateBoardByID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner:
+                  type: string
+                name:
+                  type: string
+      responses:
+        '200':
+          description: New board
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to update board
+        '401':
+          description: Unauthorized
+    delete:
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Delete board
+      operationId: DeleteBoardByID
+      responses:
+        '200':
+          description: Deleted board
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to delete board
+        '401':
+          description: Unauthorized
 
 components:
   schemas:
@@ -469,6 +636,20 @@ components:
         login:
           type: string
           example: "user_login"
+
+    Board:
+      type: object
+      required:
+        - id
+        - owner
+        - name
+      properties:
+        id:
+          type: string
+        owner:
+          type: string
+        name:
+          type: string
 
     MemeScore:
       $ref: '#/components/schemas/Meme'

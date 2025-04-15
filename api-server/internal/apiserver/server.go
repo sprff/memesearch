@@ -40,7 +40,7 @@ func (s ServerImpl) DeleteMemeByID(ctx context.Context, request DeleteMemeByIDRe
 	if err != nil {
 		return nil, fmt.Errorf("can't delete meme: %w", err)
 	}
-	return DeleteMemeByID204Response{}, nil
+	return DeleteMemeByID200Response{}, nil
 }
 
 // GetMediaByID implements StrictServerInterface.
@@ -110,7 +110,7 @@ func (s ServerImpl) PostMeme(ctx context.Context, request PostMemeRequestObject)
 		return nil, fmt.Errorf("can't create meme: %w", err)
 	}
 
-	return PostMeme201JSONResponse{Id: string(id)}, nil
+	return PostMeme200JSONResponse{Id: string(id)}, nil
 }
 
 // PutMediaByID implements StrictServerInterface.
@@ -281,10 +281,88 @@ func (s ServerImpl) AuthWhoami(ctx context.Context, request AuthWhoamiRequestObj
 
 // GetUserByID implements StrictServerInterface.
 func (s ServerImpl) GetUserByID(ctx context.Context, request GetUserByIDRequestObject) (GetUserByIDResponseObject, error) {
-	id := request.Id
-	user, err := s.api.GetUser(ctx, models.UserID(id))
+	id := models.UserID(request.Id)
+	user, err := s.api.GetUser(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("can't get user: %w", err)
 	}
 	return GetUserByID200JSONResponse{Id: string(user.ID), Login: user.Login}, nil
+}
+
+// ListBoards implements StrictServerInterface.
+func (s ServerImpl) ListBoards(ctx context.Context, request ListBoardsRequestObject) (ListBoardsResponseObject, error) {
+	page, pageSize, sortBy, err := request.GetParams()
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
+	}
+	boards, err := s.api.ListBoards(ctx, (page-1)*pageSize, pageSize, sortBy)
+	if err != nil {
+		if err == api.ErrForbidden {
+			return ListBoards403Response{}, nil
+		}
+		return nil, fmt.Errorf("can't list boards: %w", err)
+	}
+
+	return ListBoards200JSONResponse(convertBoardListToServer(boards)), err
+}
+
+// GetBoardByID implements StrictServerInterface.
+func (s ServerImpl) GetBoardByID(ctx context.Context, request GetBoardByIDRequestObject) (GetBoardByIDResponseObject, error) {
+	id := models.BoardID(request.Id)
+	board, err := s.api.GetBoardByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("can't get board: %w", err)
+	}
+	return GetBoardByID200JSONResponse(convertBoardToServer(board)), nil
+}
+
+// PostBoard implements StrictServerInterface.
+func (s ServerImpl) PostBoard(ctx context.Context, request PostBoardRequestObject) (PostBoardResponseObject, error) {
+	name, owner, err := request.GetParams()
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
+	}
+
+	board, err := s.api.CreateBoard(ctx, owner, name)
+	if err != nil {
+		return nil, fmt.Errorf("can't create board: %w", err)
+	}
+
+	return PostBoard200JSONResponse(convertBoardToServer(board)), nil
+}
+
+// UpdateBoardByID implements StrictServerInterface.
+func (s ServerImpl) UpdateBoardByID(ctx context.Context, request UpdateBoardByIDRequestObject) (UpdateBoardByIDResponseObject, error) {
+	id, name, owner, err := request.GetParams()
+	if err != nil {
+		return nil, fmt.Errorf("can't get params: %w", err)
+	}
+
+	board, err := s.api.GetBoardByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("can't get board: %w", err)
+	}
+	if name != nil {
+		board.Name = *name
+	}
+	if owner != nil {
+		board.Owner = *owner
+	}
+
+	board, err = s.api.UpdateBoard(ctx, board)
+	if err != nil {
+		return nil, fmt.Errorf("can't update: %w", err)
+	}
+	return UpdateBoardByID200JSONResponse(convertBoardToServer(board)), nil
+
+}
+
+// DeleteBoardByID implements StrictServerInterface.
+func (s ServerImpl) DeleteBoardByID(ctx context.Context, request DeleteBoardByIDRequestObject) (DeleteBoardByIDResponseObject, error) {
+	id := models.BoardID(request.Id)
+	board, err := s.api.DeleteBoard(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("can't delete: %w", err)
+	}
+	return DeleteBoardByID200JSONResponse(convertBoardToServer(board)), nil
 }
