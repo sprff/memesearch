@@ -4,7 +4,6 @@ package apiserver
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"memesearch/internal/api"
@@ -38,10 +37,7 @@ func (s ServerImpl) About(ctx context.Context, request AboutRequestObject) (Abou
 // DeleteMemeByID implements StrictServerInterface.
 func (s ServerImpl) DeleteMemeByID(ctx context.Context, request DeleteMemeByIDRequestObject) (DeleteMemeByIDResponseObject, error) {
 	err := s.api.DeleteMeme(ctx, models.MemeID(request.Id))
-	switch {
-	case errors.Is(err, api.ErrMemeNotFound):
-		return nil, ErrMemeNotFound
-	case err != nil:
+	if err != nil {
 		return nil, fmt.Errorf("can't delete meme: %w", err)
 	}
 	return DeleteMemeByID204Response{}, nil
@@ -50,10 +46,7 @@ func (s ServerImpl) DeleteMemeByID(ctx context.Context, request DeleteMemeByIDRe
 // GetMediaByID implements StrictServerInterface.
 func (s ServerImpl) GetMediaByID(ctx context.Context, request GetMediaByIDRequestObject) (GetMediaByIDResponseObject, error) {
 	media, err := s.api.GetMedia(ctx, models.MediaID(request.Id))
-	switch {
-	case errors.Is(err, api.ErrMediaNotFound):
-		return nil, ErrMediaNotFound
-	case err != nil:
+	if err != nil {
 		return nil, fmt.Errorf("can't get media: %w", err)
 	}
 
@@ -78,11 +71,8 @@ func (s ServerImpl) GetMediaByID(ctx context.Context, request GetMediaByIDReques
 // GetMemeByID implements StrictServerInterface.
 func (s ServerImpl) GetMemeByID(ctx context.Context, request GetMemeByIDRequestObject) (GetMemeByIDResponseObject, error) {
 	meme, err := s.api.GetMemeByID(ctx, models.MemeID(request.Id))
-	switch {
-	case errors.Is(err, api.ErrMemeNotFound):
-		return nil, ErrMemeNotFound
-	case err != nil:
-		return nil, fmt.Errorf("can't get meme")
+	if err != nil {
+		return nil, fmt.Errorf("can't get meme: %w", err)
 	}
 	return GetMemeByID200JSONResponse(convertMemeToServer(meme)), nil
 }
@@ -104,9 +94,7 @@ func (s ServerImpl) ListMemes(ctx context.Context, request ListMemesRequestObjec
 		conv = append(conv, convertMemeToServer(m))
 	}
 
-	return ListMemes200JSONResponse{
-		Items: conv,
-	}, nil
+	return ListMemes200JSONResponse{Items: conv}, nil
 }
 
 // PostMeme implements StrictServerInterface.
@@ -117,7 +105,6 @@ func (s ServerImpl) PostMeme(ctx context.Context, request PostMemeRequestObject)
 	}
 
 	meme := models.Meme{BoardID: board, Filename: filename, Description: dsc}
-
 	id, err := s.api.CreateMeme(ctx, meme)
 	if err != nil {
 		return nil, fmt.Errorf("can't create meme: %w", err)
@@ -132,7 +119,7 @@ func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDReques
 	form, err := request.Body.ReadForm(18 * 1024 * 1024) // 18MB limit
 	if err != nil {
 		if err == multipart.ErrMessageTooLarge {
-			return nil, ErrTooLarge
+			return nil, invalidInput("body", "body is too big")
 		}
 		return nil, fmt.Errorf("can't read form: %w", err)
 	}
@@ -169,7 +156,7 @@ func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDReques
 	}
 
 	if !allowedTypes[contentType] {
-		return nil, ErrUnsupportedMediaType
+		return nil, invalidInput("media", "bad media type")
 	}
 
 	// Reset file pointer after reading the header

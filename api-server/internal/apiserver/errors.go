@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"memesearch/internal/api"
 	"net/http"
 	"reflect"
 )
@@ -23,46 +24,34 @@ func (e Error) Is(target error) bool {
 
 }
 
-var ErrMemeNotFound = Error{Id: "MEME_NOT_FOUND", Message: "Can't find meme"}
-var ErrMediaNotFound = Error{Id: "MEDIA_NOT_FOUND", Message: "Can't find media"}
-var ErrTooLarge = Error{Id: "FILE_TOO_LARGE", Message: "Request body too large"}
-var ErrInvalidPagination = Error{Id: "INVALID_PAGINATION", Message: "Some of requrements doesn't meet page>=1;1<=pagesize<=100"}
-var ErrUnsupportedMediaType = Error{Id: "UNSUPPORTED_MEDIA_TYPE", Message: "Unsupported media type"}
-
 func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	ctx := r.Context()
 	slog.DebugContext(ctx, "Response error", "err", err)
 
+	var resultErr Error
 	var invalidParam *InvalidParamFormatError
+
 	switch {
-	case errors.Is(err, ErrMediaNotFound),
-		errors.Is(err, ErrMemeNotFound):
+	case errors.Is(err, api.ErrMediaNotFound),
+		errors.Is(err, api.ErrMemeNotFound),
+		errors.Is(err, api.ErrUserNotFound),
+		errors.Is(err, api.ErrBoardNotFound):
 
 		w.WriteHeader(http.StatusNotFound)
-
-	case errors.Is(err, ErrTooLarge),
-		errors.Is(err, ErrInvalidPagination),
-		errors.Is(err, ErrUnsupportedMediaType):
-
-		w.WriteHeader(http.StatusBadRequest)
+		resultErr = Error{Id: err.Error()}
 
 	case errors.As(err, &invalidParam):
-
 		b := map[string]any{invalidParam.ParamName: invalidParam.Err.Error()}
-		body, err := json.Marshal(Error{Id: "INVALID_REQUEST", Body: &b})
-		if err != nil {
-			slog.ErrorContext(ctx, "Can't marshall json", "err", err)
-		}
+		resultErr = Error{Id: "INVALID_REQUEST", Body: &b}
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write(body)
-		return
 
 	default:
 		slog.ErrorContext(ctx, "Unexpected error", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	body, err := json.MarshalIndent(err, "", " ") //FIXME
+
+	body, err := json.MarshalIndent(resultErr, "", " ")
 	if err != nil {
 		slog.ErrorContext(ctx, "Can't marshall json", "err", err)
 	}

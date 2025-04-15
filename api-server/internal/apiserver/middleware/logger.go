@@ -26,6 +26,7 @@ func Logger() func(f strictnethttp.StrictHTTPHandlerFunc, operationID string) st
 			slog.InfoContext(ctx, fmt.Sprintf("%s %s start", r.Method, r.RequestURI))
 			*r = *r.WithContext(ctx)
 			res, err := f(ctx, w, r, request)
+			ctx = r.Context()
 			if err != nil {
 				slog.WarnContext(ctx, fmt.Sprintf("%s %s failed", r.Method, r.RequestURI), "err", err)
 			} else {

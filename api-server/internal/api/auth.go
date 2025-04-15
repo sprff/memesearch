@@ -83,7 +83,7 @@ func (a *API) ValidateToken(tokenString string) (models.UserID, error) {
 		return []byte(a.secrets.JwtCode), nil
 	})
 	if err != nil {
-		return "", err
+		return "", ErrInvalidToken
 	}
 
 	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
