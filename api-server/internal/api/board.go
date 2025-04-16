@@ -6,7 +6,7 @@ import (
 	"memesearch/internal/models"
 )
 
-func (a *API) CreateBoard(ctx context.Context, owner models.UserID, name string) (models.Board, error) {
+func (a *API) CreateBoard(ctx context.Context, name string, owner models.UserID) (models.Board, error) {
 	board, err := a.storage.CreateBoard(ctx, owner, name)
 	if err != nil {
 		return models.Board{}, fmt.Errorf("can't create board: %w", err)
@@ -22,12 +22,25 @@ func (a *API) GetBoardByID(ctx context.Context, id models.BoardID) (models.Board
 	return board, nil
 }
 
-func (a *API) UpdateBoard(ctx context.Context, board models.Board) (models.Board, error) {
-	err := a.storage.UpdateBoard(ctx, board)
+func (a *API) UpdateBoard(ctx context.Context, id models.BoardID, name *string, owner *models.UserID) (models.Board, error) {
+	board, err := a.GetBoardByID(ctx, id)
+	if err != nil {
+		return models.Board{}, fmt.Errorf("can't get init board: %w", err)
+	}
+
+	if name != nil {
+		board.Name = *name
+	}
+	if owner != nil {
+		board.Owner = *owner
+	}
+
+	err = a.storage.UpdateBoard(ctx, board)
 	if err != nil {
 		return models.Board{}, fmt.Errorf("can't update board: %w", err)
 	}
-	board, err = a.storage.GetBoardByID(ctx, board.ID)
+
+	board, err = a.storage.GetBoardByID(ctx, id)
 	if err != nil {
 		return models.Board{}, fmt.Errorf("can't get board: %w", err)
 	}

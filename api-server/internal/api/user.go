@@ -3,21 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"memesearch/internal/models"
 )
-
-func (a *API) PostUser(ctx context.Context, login string, password string) (models.UserID, error) {
-	password = a.hashPassword(login, password)
-	id, err := a.storage.CreateUser(ctx, login, password)
-	if err != nil {
-		return models.UserID(""), fmt.Errorf("can't create: %w", err)
-	}
-	slog.InfoContext(ctx, "New user registered",
-		"id", id,
-		"login", login)
-	return id, nil
-}
 
 func (a *API) GetUser(ctx context.Context, id models.UserID) (models.User, error) {
 	user, err := a.storage.GetUserByID(ctx, id)

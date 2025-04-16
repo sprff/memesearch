@@ -8,15 +8,13 @@ import (
 	"memesearch/internal/models"
 )
 
-func (a *API) CreateMeme(ctx context.Context, meme models.Meme) (models.MemeID, error) {
-	logger := slog.Default().With("from", "API.CreateMeme")
-	logger.InfoContext(ctx, "Started")
-
+func (a *API) CreateMeme(ctx context.Context, board models.BoardID, filename string, dsc map[string]string) (models.MemeID, error) {
+	meme := models.Meme{BoardID: board, Filename: filename, Description: dsc}
 	id, err := a.storage.InsertMeme(ctx, meme)
 	if err != nil {
 		return "", fmt.Errorf("can't create meme: %w", err)
 	}
-	logger.DebugContext(ctx, "Meme inserted", "id", id)
+
 	return id, nil
 }
 
@@ -36,20 +34,37 @@ func (a *API) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, e
 	return meme, nil
 }
 
-func (a *API) UpdateMeme(ctx context.Context, meme models.Meme) error {
-	logger := slog.Default().With("from", "API.UpdateMeme")
-	logger.InfoContext(ctx, "Started", "id", meme.ID)
+func (a *API) UpdateMeme(ctx context.Context, id models.MemeID, board *models.BoardID, filename *string, dsc *map[string]string) (models.Meme, error) {
+	meme, err := a.GetMemeByID(ctx, id)
+	if err != nil {
+		return models.Meme{}, fmt.Errorf("can't get meme: %w", err)
+	}
+	if dsc != nil {
+		meme.Description = *dsc
+	}
+	if filename != nil {
+		meme.Filename = *filename
+	}
+	if board != nil {
+		meme.BoardID = *board
+	}
 
-	err := a.storage.UpdateMeme(ctx, meme)
+	err = a.storage.UpdateMeme(ctx, meme)
 	if err != nil {
 		switch {
 		case errors.Is(err, models.ErrMemeNotFound):
-			return ErrMemeNotFound
+			return models.Meme{}, ErrMemeNotFound
 		default:
-			return fmt.Errorf("can't update meme: %w", err)
+			return models.Meme{}, fmt.Errorf("can't update meme: %w", err)
 		}
 	}
-	return nil
+
+	meme, err = a.GetMemeByID(ctx, id)
+	if err != nil {
+		return models.Meme{}, fmt.Errorf("can't get meme: %w", err)
+	}
+
+	return meme, nil
 }
 
 func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) error {

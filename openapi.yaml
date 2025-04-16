@@ -111,10 +111,6 @@ paths:
                 $ref: '#/components/schemas/Meme'
         '404':
           description: Meme not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
     put:
       tags:
@@ -154,10 +150,6 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Meme not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
 
     delete:
@@ -173,10 +165,6 @@ paths:
           description: Meme deleted successfully
         '404':
           description: Meme not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
   /media/{mediaID}:
     put:
@@ -202,18 +190,6 @@ paths:
           description: Media updated successfully
         '400':
           description: Invalid file format or size
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '413':
-          description: File too large
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '415':
-          description: Unsupported media type
           content:
             application/json:
               schema:
@@ -253,10 +229,6 @@ paths:
                   format: binary
         '404':
           description: Media not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
   /search/byboard/{boardID}:
     get:
@@ -288,10 +260,6 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Board not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
   # /users:
     # get:

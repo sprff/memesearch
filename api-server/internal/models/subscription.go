@@ -9,6 +9,6 @@ type Subsciption struct {
 }
 
 type SubsciptionRepo interface {
-	Subscribe(ctx context.Context, sub Subsciption) error
-	Unsubscribe(ctx context.Context, sub Subsciption) error
+	Subscribe(ctx context.Context, user UserID, board BoardID, role string) error
+	Unsubscribe(ctx context.Context, user UserID, board BoardID, role string) error
 }

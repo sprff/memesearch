@@ -12,7 +12,22 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func (a *API) LoginUser(ctx context.Context, login string, password string) (string, error) {
+func (a *API) AuthRegister(ctx context.Context, login string, password string) (models.UserID, error) {
+	password = a.hashPassword(login, password)
+	id, err := a.storage.CreateUser(ctx, login, password)
+	if err != nil {
+		if err == models.ErrUserLoginAlreadyExists {
+			return "", ErrLoginExists
+		}
+		return models.UserID(""), fmt.Errorf("can't create: %w", err)
+	}
+	slog.InfoContext(ctx, "New user registered",
+		"id", id,
+		"login", login)
+	return id, nil
+}
+
+func (a *API) AuthLogin(ctx context.Context, login string, password string) (string, error) {
 	password = a.hashPassword(login, password)
 	user, err := a.storage.LoginUser(ctx, login, password)
 	if err != nil {
@@ -32,11 +47,15 @@ func (a *API) LoginUser(ctx context.Context, login string, password string) (str
 	return token, nil
 }
 
-func (a *API) Whoami(ctx context.Context, token string) (models.User, error) {
-	user, err := a.storage.GetUserByID(ctx, models.UserID(token))
+func (a *API) AuthWhoami(ctx context.Context) (models.User, error) {
+	id := GetUserID(ctx)
+	if id == "" {
+		return models.User{}, ErrUnauthorized
+	}
+	user, err := a.storage.GetUserByID(ctx, models.UserID(id))
 	if err != nil {
 		if err == models.ErrUserNotFound {
-			return models.User{}, ErrUserNotFound
+			return models.User{}, ErrForbidden
 		}
 		return models.User{}, fmt.Errorf("can't login: %w", err)
 	}
@@ -74,8 +93,7 @@ func (a *API) generateToken(u models.User) (string, error) {
 	return tokenString, nil
 }
 
-// ValidateToken проверяет JWT токен и возвращает UserID если токен валиден
-func (a *API) ValidateToken(tokenString string) (models.UserID, error) {
+func (a *API) Authorize(ctx context.Context, tokenString string) (context.Context, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrInvalidToken
@@ -83,12 +101,28 @@ func (a *API) ValidateToken(tokenString string) (models.UserID, error) {
 		return []byte(a.secrets.JwtCode), nil
 	})
 	if err != nil {
-		return "", ErrInvalidToken
+		return nil, ErrInvalidToken
 	}
 
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims.UserID, nil
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+	userId := claims.UserID
+	_, err = a.storage.GetUserByID(ctx, userId)
+	if err != nil {
+		if err == models.ErrUserNotFound {
+			return nil, ErrInvalidToken
+		}
+		return nil, fmt.Errorf("can't get user: %w", err)
 	}
 
-	return "", ErrInvalidToken
+	return context.WithValue(ctx, contextKey("user_id"), userId), nil
+}
+
+type contextKey string
+
+func GetUserID(ctx context.Context) models.UserID {
+	s, _ := ctx.Value(contextKey("user_id")).(models.UserID)
+	return s
 }

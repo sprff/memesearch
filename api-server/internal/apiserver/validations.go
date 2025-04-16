@@ -8,7 +8,7 @@ import (
 )
 
 func (r UpdateMemeByIDRequestObject) GetParams() (
-	id models.MemeID, dsc *map[string]string, filename *string, board *models.BoardID, err error) {
+	id models.MemeID, board *models.BoardID, filename *string, dsc *map[string]string, err error) {
 	id = models.MemeID(r.MemeID)
 	u := r.Body
 	if u == nil {
@@ -124,14 +124,14 @@ func getDescriptionMap(p SearchByBoardIDParams) map[string]string {
 }
 
 func (r PostMemeRequestObject) GetParams() (
-	id models.BoardID, filename string, dsc map[string]string, err error) {
+	board models.BoardID, filename string, dsc map[string]string, err error) {
 	if r.Body == nil {
 		err = invalidInput("body", "not empty body is expected")
 		return
 	}
 
 	//TODO validate boardID
-	id = models.BoardID(r.Body.BoardId)
+	board = models.BoardID(r.Body.BoardId)
 	filename = r.Body.Filename
 	dsc, err = convertMapToString(r.Body.Description)
 	if err != nil {

@@ -40,6 +40,14 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 		w.WriteHeader(http.StatusNotFound)
 		resultErr = Error{Id: unwrapErr(err).Error()}
 
+	case errors.Is(err, api.ErrUnauthorized):
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+
+	case errors.Is(err, api.ErrForbidden):
+		w.WriteHeader(http.StatusForbidden)
+		return
+
 	case errors.As(err, &invalidParam):
 		b := map[string]any{invalidParam.ParamName: invalidParam.Err.Error()}
 		resultErr = Error{Id: "INVALID_REQUEST", Body: &b}
