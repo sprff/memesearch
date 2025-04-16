@@ -14,6 +14,7 @@ type Storage struct {
 	models.MemeRepo
 	models.MediaRepo
 	models.UserRepo
+	models.SubsciptionRepo
 }
 
 func New(cfg config.Config) (s Storage, err error) {
@@ -30,6 +31,10 @@ func New(cfg config.Config) (s Storage, err error) {
 		return Storage{}, fmt.Errorf("can't load meme store: %w", err)
 	}
 	s.MediaRepo, err = s3.NewMediaStore(context.Background(), cfg.S3)
+	if err != nil {
+		return Storage{}, fmt.Errorf("can't load media store: %w", err)
+	}
+	s.SubsciptionRepo, err = psql.NewSubStore(cfg.Database)
 	if err != nil {
 		return Storage{}, fmt.Errorf("can't load media store: %w", err)
 	}

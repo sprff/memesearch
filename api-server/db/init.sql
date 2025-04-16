@@ -30,4 +30,12 @@ CREATE TABLE IF NOT EXISTS medias
     body BYTEA
 );
 
+CREATE TABLE IF NOT EXISTS subscriptions
+(
+    user_id VARCHAR(63),
+    board_id VARCHAR(63),
+    role TEXT,
+    PRIMARY KEY (user_id, board_id)
+);
+
 COMMIT;

@@ -9,4 +9,5 @@ var (
 	ErrMemeNotFound  = errors.New("MEME_NOT_FOUND")
 	ErrInvalidToken  = errors.New("INVALID_TOKEN")
 	ErrForbidden     = errors.New("FORBIDDEN")
+	ErrSubNotFound   = errors.New("SUB_NOT_FOUND")
 )

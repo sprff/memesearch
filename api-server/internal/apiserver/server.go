@@ -36,7 +36,7 @@ func (s ServerImpl) About(ctx context.Context, request AboutRequestObject) (Abou
 
 // DeleteMemeByID implements StrictServerInterface.
 func (s ServerImpl) DeleteMemeByID(ctx context.Context, request DeleteMemeByIDRequestObject) (DeleteMemeByIDResponseObject, error) {
-	err := s.api.DeleteMeme(ctx, models.MemeID(request.Id))
+	err := s.api.DeleteMeme(ctx, models.MemeID(request.MemeID))
 	if err != nil {
 		return nil, fmt.Errorf("can't delete meme: %w", err)
 	}
@@ -45,7 +45,7 @@ func (s ServerImpl) DeleteMemeByID(ctx context.Context, request DeleteMemeByIDRe
 
 // GetMediaByID implements StrictServerInterface.
 func (s ServerImpl) GetMediaByID(ctx context.Context, request GetMediaByIDRequestObject) (GetMediaByIDResponseObject, error) {
-	media, err := s.api.GetMedia(ctx, models.MediaID(request.Id))
+	media, err := s.api.GetMedia(ctx, models.MediaID(request.MediaID))
 	if err != nil {
 		return nil, fmt.Errorf("can't get media: %w", err)
 	}
@@ -70,7 +70,7 @@ func (s ServerImpl) GetMediaByID(ctx context.Context, request GetMediaByIDReques
 
 // GetMemeByID implements StrictServerInterface.
 func (s ServerImpl) GetMemeByID(ctx context.Context, request GetMemeByIDRequestObject) (GetMemeByIDResponseObject, error) {
-	meme, err := s.api.GetMemeByID(ctx, models.MemeID(request.Id))
+	meme, err := s.api.GetMemeByID(ctx, models.MemeID(request.MemeID))
 	if err != nil {
 		return nil, fmt.Errorf("can't get meme: %w", err)
 	}
@@ -170,7 +170,7 @@ func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDReques
 		return nil, fmt.Errorf("can't read file: %w", err)
 	}
 
-	err = s.api.SetMedia(ctx, models.Media{ID: models.MediaID(request.Id), Body: data})
+	err = s.api.SetMedia(ctx, models.Media{ID: models.MediaID(request.MediaID), Body: data})
 	if err != nil {
 		return nil, fmt.Errorf("can't set media: %w", err)
 	}
@@ -281,7 +281,7 @@ func (s ServerImpl) AuthWhoami(ctx context.Context, request AuthWhoamiRequestObj
 
 // GetUserByID implements StrictServerInterface.
 func (s ServerImpl) GetUserByID(ctx context.Context, request GetUserByIDRequestObject) (GetUserByIDResponseObject, error) {
-	id := models.UserID(request.Id)
+	id := models.UserID(request.UserID)
 	user, err := s.api.GetUser(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("can't get user: %w", err)
@@ -308,7 +308,7 @@ func (s ServerImpl) ListBoards(ctx context.Context, request ListBoardsRequestObj
 
 // GetBoardByID implements StrictServerInterface.
 func (s ServerImpl) GetBoardByID(ctx context.Context, request GetBoardByIDRequestObject) (GetBoardByIDResponseObject, error) {
-	id := models.BoardID(request.Id)
+	id := models.BoardID(request.BoardID)
 	board, err := s.api.GetBoardByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("can't get board: %w", err)
@@ -359,10 +359,32 @@ func (s ServerImpl) UpdateBoardByID(ctx context.Context, request UpdateBoardByID
 
 // DeleteBoardByID implements StrictServerInterface.
 func (s ServerImpl) DeleteBoardByID(ctx context.Context, request DeleteBoardByIDRequestObject) (DeleteBoardByIDResponseObject, error) {
-	id := models.BoardID(request.Id)
+	id := models.BoardID(request.BoardID)
 	board, err := s.api.DeleteBoard(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("can't delete: %w", err)
 	}
 	return DeleteBoardByID200JSONResponse(convertBoardToServer(board)), nil
+}
+
+// SubscribeByBoardID implements StrictServerInterface.
+func (s ServerImpl) SubscribeByBoardID(ctx context.Context, request SubscribeByBoardIDRequestObject) (SubscribeByBoardIDResponseObject, error) {
+	boardID := models.BoardID(request.BoardID)
+	userID := models.UserID(middleware.GetAuthUserID(ctx))
+	err := s.api.Subscribe(ctx, models.Subsciption{BoardID: boardID, UserID: userID, Role: "sub"})
+	if err != nil {
+		return nil, fmt.Errorf("can't subscribe: %w", err)
+	}
+	return SubscribeByBoardID200Response{}, nil
+}
+
+// UnsubscribeByBoardID implements StrictServerInterface.
+func (s ServerImpl) UnsubscribeByBoardID(ctx context.Context, request UnsubscribeByBoardIDRequestObject) (UnsubscribeByBoardIDResponseObject, error) {
+	boardID := models.BoardID(request.BoardID)
+	userID := models.UserID(middleware.GetAuthUserID(ctx))
+	err := s.api.Unsubscribe(ctx, models.Subsciption{BoardID: boardID, UserID: userID})
+	if err != nil {
+		return nil, fmt.Errorf("can't subscribe: %w", err)
+	}
+	return UnsubscribeByBoardID200Response{}, nil
 }

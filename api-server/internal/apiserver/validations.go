@@ -9,7 +9,7 @@ import (
 
 func (r UpdateMemeByIDRequestObject) GetParams() (
 	id models.MemeID, dsc *map[string]string, filename *string, board *models.BoardID, err error) {
-	id = models.MemeID(r.Id)
+	id = models.MemeID(r.MemeID)
 	u := r.Body
 	if u == nil {
 		err = invalidInput("body", "not empty body is expected")
@@ -53,7 +53,7 @@ func (r SearchByBoardIDRequestObject) GetParams() (
 	sortBy = DefaultSortBy
 
 	//TODO validate board
-	id = models.BoardID(r.Id)
+	id = models.BoardID(r.BoardID)
 
 	if r.Params.Page != nil {
 		page = *r.Params.Page
@@ -204,7 +204,7 @@ func (r PostBoardRequestObject) GetParams() (
 
 func (r UpdateBoardByIDRequestObject) GetParams() (
 	id models.BoardID, name *string, owner *models.UserID, err error) {
-	id = models.BoardID(r.Id)
+	id = models.BoardID(r.BoardID)
 	name = r.Body.Name
 	if name != nil && (len(*name) < 3 || 30 < len(*name)) {
 		err = invalidInput("name", "name length should be [3;30]")

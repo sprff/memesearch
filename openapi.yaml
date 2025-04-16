@@ -93,7 +93,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /memes/{id}:
+  /memes/{memeID}:
     get:
       tags:
         - Memes
@@ -178,7 +178,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /media/{id}:
+  /media/{mediaID}:
     put:
       tags:
         - Media
@@ -258,7 +258,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /search/byboard/{id}:
+  /search/byboard/{boardID}:
     get:
       tags:
         - Search
@@ -313,7 +313,7 @@ paths:
     #     '401':
     #       description: Unauthorized
 
-  /users/{id}:
+  /users/{userID}:
     get:
       parameters:
         - $ref: '#/components/parameters/userId'
@@ -525,7 +525,8 @@ paths:
           description: Don't have rights to get board
         '401':
           description: Unauthorized
-  /boards/{id}:
+
+  /boards/{boardID}:
     get:
       tags:
         - Board
@@ -594,9 +595,40 @@ paths:
         '401':
           description: Unauthorized
 
+  /subscribe/{boardID}:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Update board
+      operationId: SubscribeByBoardID
+      responses:
+        '200':
+          description: Subscribed
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to subscribe
+        '401':
+          description: Unauthorized
+
+  /unsubscribe/{boardID}:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Update board
+      operationId: UnsubscribeByBoardID
+      responses:
+        '200':
+          description: Unsubscribed
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to subscribe
+        '401':
+          description: Unauthorized
+
 components:
   schemas:
-
     Meme:
       type: object
       required:
@@ -624,6 +656,7 @@ components:
         updated_at:
           type: string
           format: date-time
+
     User:
       type: object
       required:
@@ -692,7 +725,6 @@ components:
           items:
             $ref: '#/components/schemas/MemeScore'
 
-
     UserCreate:
       type: object
       properties:
@@ -722,8 +754,6 @@ components:
         description:
           type: string
           example: API for managing internet memes and related media
-
-
 
   parameters:
     page:
@@ -758,7 +788,7 @@ components:
         default: createdAt
 
     memeId:
-      name: id
+      name: memeID
       in: path
       description: ID of the meme
       required: true
@@ -766,7 +796,7 @@ components:
         type: string
 
     mediaId:
-      name: id
+      name: mediaID
       in: path
       description: ID of the media file
       required: true
@@ -774,7 +804,7 @@ components:
         type: string
 
     boardId:
-      name: id
+      name: boardID
       in: path
       description: ID of the board
       required: true
@@ -782,7 +812,7 @@ components:
         type: string
 
     userId:
-      name: id
+      name: userID
       in: path
       description: ID of the user
       required: true
