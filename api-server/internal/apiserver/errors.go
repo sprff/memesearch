@@ -47,6 +47,10 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, api.ErrForbidden):
 		w.WriteHeader(http.StatusForbidden)
 		return
+	case errors.Is(err, api.ErrLoginExists):
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte(unwrapErr(err).Error()))
+		return
 
 	case errors.As(err, &invalidParam):
 		b := map[string]any{invalidParam.ParamName: invalidParam.Err.Error()}

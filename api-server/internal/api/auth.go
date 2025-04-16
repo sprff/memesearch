@@ -48,11 +48,12 @@ func (a *API) AuthLogin(ctx context.Context, login string, password string) (str
 }
 
 func (a *API) AuthWhoami(ctx context.Context) (models.User, error) {
-	id := GetUserID(ctx)
-	if id == "" {
+	userID := GetUserID(ctx)
+	if userID == "" {
 		return models.User{}, ErrUnauthorized
 	}
-	user, err := a.storage.GetUserByID(ctx, models.UserID(id))
+
+	user, err := a.storage.GetUserByID(ctx, userID)
 	if err != nil {
 		if err == models.ErrUserNotFound {
 			return models.User{}, ErrForbidden
@@ -93,6 +94,8 @@ func (a *API) generateToken(u models.User) (string, error) {
 	return tokenString, nil
 }
 
+type contextKey string
+
 func (a *API) Authorize(ctx context.Context, tokenString string) (context.Context, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -119,8 +122,6 @@ func (a *API) Authorize(ctx context.Context, tokenString string) (context.Contex
 
 	return context.WithValue(ctx, contextKey("user_id"), userId), nil
 }
-
-type contextKey string
 
 func GetUserID(ctx context.Context) models.UserID {
 	s, _ := ctx.Value(contextKey("user_id")).(models.UserID)

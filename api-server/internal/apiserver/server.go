@@ -302,12 +302,12 @@ func (s ServerImpl) GetBoardByID(ctx context.Context, request GetBoardByIDReques
 
 // PostBoard implements StrictServerInterface.
 func (s ServerImpl) PostBoard(ctx context.Context, request PostBoardRequestObject) (PostBoardResponseObject, error) {
-	name, owner, err := request.GetParams()
+	name, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	board, err := s.api.CreateBoard(ctx, name, owner)
+	board, err := s.api.CreateBoard(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("can't create board: %w", err)
 	}
@@ -360,7 +360,7 @@ func (s ServerImpl) SubscribeByBoardID(ctx context.Context, request SubscribeByB
 func (s ServerImpl) UnsubscribeByBoardID(ctx context.Context, request UnsubscribeByBoardIDRequestObject) (UnsubscribeByBoardIDResponseObject, error) {
 	boardID := models.BoardID(request.BoardID)
 	userID := models.UserID(api.GetUserID(ctx))
-	
+
 	err := s.api.Unsubscribe(ctx, userID, boardID, "sub")
 	if err != nil {
 		return nil, fmt.Errorf("can't unsubscribe: %w", err)

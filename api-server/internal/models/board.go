@@ -17,5 +17,5 @@ type BoardRepo interface {
 	GetBoardByID(ctx context.Context, id BoardID) (Board, error)
 	UpdateBoard(ctx context.Context, board Board) error
 	DeleteBoard(ctx context.Context, id BoardID) error
-	ListBoards(ctx context.Context, offset, limit int, sortBy string) ([]Board, error) 
+	ListBoards(ctx context.Context, userID UserID, offset, limit int, sortBy string) ([]Board, error)
 }

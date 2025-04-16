@@ -192,13 +192,12 @@ func (r AuthRegisterRequestObject) GetParams() (
 }
 
 func (r PostBoardRequestObject) GetParams() (
-	name string, owner models.UserID, err error) {
+	name string, err error) {
 	name = r.Body.Name
 	if len(name) < 3 || 30 < len(name) {
 		err = invalidInput("name", "name length should be [3;30]")
 		return
 	}
-	owner = models.UserID(r.Body.Owner)
 	return
 }
 
