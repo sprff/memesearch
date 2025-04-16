@@ -26,6 +26,9 @@ func (a *API) GetBoardByID(ctx context.Context, id models.BoardID) (models.Board
 
 	board, err := a.storage.GetBoardByID(ctx, id)
 	if err != nil {
+		if err == models.ErrBoardNotFound {
+			return models.Board{}, ErrBoardNotFound
+		}
 		return models.Board{}, fmt.Errorf("can't get board: %w", err)
 	}
 

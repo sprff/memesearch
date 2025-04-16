@@ -15,6 +15,7 @@ services:
       DB_NAME: ${MS_APISERVER_DB_NAME}
       YAS3_KEY: ${MS_APISERVER_YAS3_KEY}
       YAS3_SECRET: ${MS_APISERVER_YAS3_SECRET}
+      PASS_SALT: "SALT"
       AWS_REGION: "ru-central1"
     volumes:
       - ./api-server/logs:/app/logs

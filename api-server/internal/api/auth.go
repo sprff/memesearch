@@ -65,7 +65,7 @@ func (a *API) AuthWhoami(ctx context.Context) (models.User, error) {
 }
 
 func (a *API) hashPassword(login, password string) string {
-	str := fmt.Sprintf("%s:%s:%s", login, password, "SALT") // TODO use secret.Salt
+	str := fmt.Sprintf("%s:%s:%s", login, password, a.secrets.PassSalt)
 	hash := sha256.Sum256([]byte(str))
 	return base64.RawStdEncoding.EncodeToString(hash[:])
 }

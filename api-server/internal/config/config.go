@@ -36,6 +36,7 @@ type S3Config struct {
 type SecretConfig struct {
 	InviteCode string `env:"INVITE_CODE"`
 	JwtCode    string `env:"JWT_CODE"`
+	PassSalt   string `env:"PASS_SALT"`
 }
 
 func LoadConfig(path string) (Config, error) {

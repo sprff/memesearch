@@ -29,7 +29,6 @@ func (r UpdateMemeByIDRequestObject) GetParams() (
 		filename = u.Filename
 	}
 	if u.BoardId != nil {
-		//TODO validate if board exists
 		board = ptr(models.BoardID(*u.BoardId))
 	}
 
@@ -52,7 +51,6 @@ func (r SearchByBoardIDRequestObject) GetParams() (
 	pageSize = DefaultPageSize
 	sortBy = DefaultSortBy
 
-	//TODO validate board
 	id = models.BoardID(r.BoardID)
 
 	if r.Params.Page != nil {
@@ -130,7 +128,6 @@ func (r PostMemeRequestObject) GetParams() (
 		return
 	}
 
-	//TODO validate boardID
 	board = models.BoardID(r.Body.BoardId)
 	filename = r.Body.Filename
 	dsc, err = convertMapToString(r.Body.Description)
