@@ -22,7 +22,7 @@ func (a *API) aclUpdateBoard(ctx context.Context, id models.BoardID) error {
 	if userID == "" {
 		return ErrUnauthorized
 	}
-	board, err := a.GetBoardByID(ctx, id)
+	board, err := a.api.GetBoardByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("can't get board: %w", err)
 	}
@@ -37,7 +37,7 @@ func (a *API) aclDeleteBoard(ctx context.Context, id models.BoardID) error {
 	if userID == "" {
 		return ErrUnauthorized
 	}
-	board, err := a.GetBoardByID(ctx, id)
+	board, err := a.api.GetBoardByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("can't get board: %w", err)
 	}
@@ -71,7 +71,7 @@ func (a *API) aclGetMeme(ctx context.Context, id models.MemeID) error {
 		return ErrUnauthorized
 	}
 
-	meme, err := a.storage.GetMemeByID(ctx, id)
+	meme, err := a.api.GetMemeByID(ctx, id)
 	if err != nil {
 		if err == models.ErrMemeNotFound {
 			return ErrMemeNotFound
@@ -79,7 +79,7 @@ func (a *API) aclGetMeme(ctx context.Context, id models.MemeID) error {
 		return fmt.Errorf("can't get meme: %w", err)
 	}
 
-	board, err := a.GetBoardByID(ctx, meme.BoardID)
+	board, err := a.api.GetBoardByID(ctx, meme.BoardID)
 	if err != nil {
 		return fmt.Errorf("can't get board: %w", err)
 	}
@@ -98,12 +98,12 @@ func (a *API) aclUpdateMeme(ctx context.Context, id models.MemeID) error {
 		return ErrUnauthorized
 	}
 
-	meme, err := a.GetMemeByID(ctx, id)
+	meme, err := a.api.GetMemeByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("can't get meme: %w", err)
 	}
 
-	board, err := a.GetBoardByID(ctx, meme.BoardID)
+	board, err := a.api.GetBoardByID(ctx, meme.BoardID)
 	if err != nil {
 		return fmt.Errorf("can't get board: %w", err)
 	}
@@ -122,12 +122,12 @@ func (a *API) aclDeleteMeme(ctx context.Context, id models.MemeID) error {
 		return ErrUnauthorized
 	}
 
-	meme, err := a.GetMemeByID(ctx, id)
+	meme, err := a.api.GetMemeByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("can't get meme: %w", err)
 	}
 
-	board, err := a.GetBoardByID(ctx, meme.BoardID)
+	board, err := a.api.GetBoardByID(ctx, meme.BoardID)
 	if err != nil {
 		return fmt.Errorf("can't get board: %w", err)
 	}
@@ -223,7 +223,7 @@ func (a *API) aclUnsubscribe(ctx context.Context, user models.UserID, board mode
 		return nil
 	}
 
-	b, err := a.GetBoardByID(ctx, board)
+	b, err := a.api.GetBoardByID(ctx, board)
 	if err != nil {
 		return fmt.Errorf("can't get board: %w", err)
 	}

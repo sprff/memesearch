@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func (a *API) AuthRegister(ctx context.Context, login string, password string) (models.UserID, error) {
+func (a *api) AuthRegister(ctx context.Context, login string, password string) (models.UserID, error) {
 	password = a.hashPassword(login, password)
 	id, err := a.storage.CreateUser(ctx, login, password)
 	if err != nil {
@@ -27,7 +27,7 @@ func (a *API) AuthRegister(ctx context.Context, login string, password string) (
 	return id, nil
 }
 
-func (a *API) AuthLogin(ctx context.Context, login string, password string) (string, error) {
+func (a *api) AuthLogin(ctx context.Context, login string, password string) (string, error) {
 	password = a.hashPassword(login, password)
 	user, err := a.storage.LoginUser(ctx, login, password)
 	if err != nil {
@@ -47,7 +47,7 @@ func (a *API) AuthLogin(ctx context.Context, login string, password string) (str
 	return token, nil
 }
 
-func (a *API) AuthWhoami(ctx context.Context) (models.User, error) {
+func (a *api) AuthWhoami(ctx context.Context) (models.User, error) {
 	userID := GetUserID(ctx)
 	if userID == "" {
 		return models.User{}, ErrUnauthorized
@@ -64,7 +64,7 @@ func (a *API) AuthWhoami(ctx context.Context) (models.User, error) {
 	return user, nil
 }
 
-func (a *API) hashPassword(login, password string) string {
+func (a *api) hashPassword(login, password string) string {
 	str := fmt.Sprintf("%s:%s:%s", login, password, a.secrets.PassSalt)
 	hash := sha256.Sum256([]byte(str))
 	return base64.RawStdEncoding.EncodeToString(hash[:])
@@ -75,7 +75,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func (a *API) generateToken(u models.User) (string, error) {
+func (a *api) generateToken(u models.User) (string, error) {
 	claims := Claims{
 		UserID: u.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -96,8 +96,8 @@ func (a *API) generateToken(u models.User) (string, error) {
 
 type contextKey string
 
-func (a *API) Authorize(ctx context.Context, tokenString string) (context.Context, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+func (a *api) Authorize(ctx context.Context, token string) (context.Context, error) {
+	t, err := jwt.ParseWithClaims(token, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrInvalidToken
 		}
@@ -107,8 +107,8 @@ func (a *API) Authorize(ctx context.Context, tokenString string) (context.Contex
 		return nil, ErrInvalidToken
 	}
 
-	claims, ok := token.Claims.(*Claims)
-	if !ok || !token.Valid {
+	claims, ok := t.Claims.(*Claims)
+	if !ok || !t.Valid {
 		return nil, ErrInvalidToken
 	}
 	userId := claims.UserID

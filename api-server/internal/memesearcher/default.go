@@ -23,7 +23,7 @@ func newDefault(store models.MemeRepo) *Default {
 // SearchForBoard implements Engine.
 func (m *Default) SearchForBoard(ctx context.Context, id models.BoardID, req map[string]string, offset int, limit int, sortBy string) ([]ScoreResult, error) {
 	// TODO apply sortBy
-	slog := slog.Default().With("from", "API.SearchForBoard")
+	slog := slog.Default().With("from", "api.SearchForBoard")
 	slog.InfoContext(ctx, "Started")
 
 	memes := []models.Meme{}

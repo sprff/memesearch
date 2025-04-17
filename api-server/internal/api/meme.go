@@ -8,11 +8,7 @@ import (
 	"memesearch/internal/models"
 )
 
-func (a *API) CreateMeme(ctx context.Context, board models.BoardID, filename string, dsc map[string]string) (models.MemeID, error) {
-	if err := a.aclPostMeme(ctx, board); err != nil {
-		return "", fmt.Errorf("acl failed: %w", err)
-	}
-
+func (a *api) CreateMeme(ctx context.Context, board models.BoardID, filename string, dsc map[string]string) (models.MemeID, error) {
 	meme := models.Meme{BoardID: board, Filename: filename, Description: dsc}
 	id, err := a.storage.InsertMeme(ctx, meme)
 	if err != nil {
@@ -22,12 +18,8 @@ func (a *API) CreateMeme(ctx context.Context, board models.BoardID, filename str
 	return id, nil
 }
 
-func (a *API) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, error) {
-	if err := a.aclGetMeme(ctx, id); err != nil {
-		return models.Meme{}, fmt.Errorf("acl failed: %w", err)
-	}
-
-	logger := slog.Default().With("from", "API.GetMeme")
+func (a *api) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, error) {
+	logger := slog.Default().With("from", "api.GetMeme")
 	logger.InfoContext(ctx, "Started", "id", id)
 
 	meme, err := a.storage.GetMemeByID(ctx, id)
@@ -42,11 +34,7 @@ func (a *API) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, e
 	return meme, nil
 }
 
-func (a *API) UpdateMeme(ctx context.Context, id models.MemeID, board *models.BoardID, filename *string, dsc *map[string]string) (models.Meme, error) {
-	if err := a.aclUpdateMeme(ctx, id); err != nil {
-		return models.Meme{}, fmt.Errorf("acl failed: %w", err)
-	}
-
+func (a *api) UpdateMeme(ctx context.Context, id models.MemeID, board *models.BoardID, filename *string, dsc *map[string]string) (models.Meme, error) {
 	meme, err := a.GetMemeByID(ctx, id)
 	if err != nil {
 		return models.Meme{}, fmt.Errorf("can't get meme: %w", err)
@@ -79,12 +67,8 @@ func (a *API) UpdateMeme(ctx context.Context, id models.MemeID, board *models.Bo
 	return meme, nil
 }
 
-func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) error {
-	if err := a.aclDeleteMeme(ctx, id); err != nil {
-		return fmt.Errorf("acl failed: %w", err)
-	}
-
-	logger := slog.Default().With("from", "API.DeleteMeme")
+func (a *api) DeleteMeme(ctx context.Context, id models.MemeID) error {
+	logger := slog.Default().With("from", "api.DeleteMeme")
 	logger.InfoContext(ctx, "Started", "id", id)
 
 	err := a.storage.DeleteMeme(ctx, id)
@@ -99,7 +83,7 @@ func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) error {
 	return nil
 }
 
-func (a *API) ListMemes(ctx context.Context, offset, limit int, sortBy string) ([]models.Meme, error) {
+func (a *api) ListMemes(ctx context.Context, offset, limit int, sortBy string) ([]models.Meme, error) {
 	userID := GetUserID(ctx)
 	if userID == "" {
 		return nil, ErrUnauthorized

@@ -49,6 +49,12 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, api.ErrForbidden):
 		w.WriteHeader(http.StatusForbidden)
 		return
+
+	case errors.Is(err, api.ErrInvalid{}):
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(unwrapErr(err).Error()))
+		return
+
 	case errors.Is(err, api.ErrLoginExists):
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(unwrapErr(err).Error()))

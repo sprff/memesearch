@@ -27,8 +27,8 @@ func NewServerImpl(api *api.API) ServerImpl {
 // About implements StrictServerInterface.
 func (s ServerImpl) About(ctx context.Context, request AboutRequestObject) (AboutResponseObject, error) {
 	return About200JSONResponse{
-		ApiName:     "Meme Search API",
-		Description: "API for managing internet memes and related media",
+		ApiName:     "Meme Search api",
+		Description: "api for managing internet memes and related media",
 		Version:     "1.0.0",
 	}, nil
 }
@@ -265,7 +265,7 @@ func (s ServerImpl) AuthWhoami(ctx context.Context, request AuthWhoamiRequestObj
 func (s ServerImpl) GetUserByID(ctx context.Context, request GetUserByIDRequestObject) (GetUserByIDResponseObject, error) {
 	id := models.UserID(request.UserID)
 
-	user, err := s.api.GetUser(ctx, id)
+	user, err := s.api.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("can't get user: %w", err)
 	}

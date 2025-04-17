@@ -7,8 +7,8 @@ import (
 	"memesearch/internal/models"
 )
 
-func (a *API) SearchMemeByBoardID(ctx context.Context, id models.BoardID, dsc map[string]string, offset, limit int, sortBy string) ([]models.Meme, error) {
-	logger := slog.Default().With("from", "API.SearchMemeByBoardID")
+func (a *api) SearchMemeByBoardID(ctx context.Context, id models.BoardID, dsc map[string]string, offset, limit int, sortBy string) ([]models.Meme, error) {
+	logger := slog.Default().With("from", "api.SearchMemeByBoardID")
 	logger.InfoContext(ctx, "Started")
 
 	engine := a.searcher.GetMemeEngine("")
