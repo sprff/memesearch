@@ -118,9 +118,10 @@ func (m *MemeStore) DeleteMeme(ctx context.Context, id models.MemeID) error {
 	return nil
 }
 
-func (m *MemeStore) ListMemes(ctx context.Context, request models.ListMemesRequest) ([]models.Meme, error) {
+func (m *MemeStore) ListMemes(ctx context.Context, userID models.UserID, offset, limit int, sortBy string) ([]models.Meme, error) {
+	// TODO use userid
 	var mps []psqlMeme
-	err := m.db.Select(&mps, "SELECT * FROM memes ORDER BY id OFFSET $1 LIMIT $2", request.Offset, request.Limit)
+	err := m.db.Select(&mps, "SELECT * FROM memes ORDER BY id OFFSET $1 LIMIT $2", offset, limit)
 	if err != nil {
 		return []models.Meme{}, fmt.Errorf("can't select: %w", err)
 	}

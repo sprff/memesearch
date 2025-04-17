@@ -9,6 +9,10 @@ import (
 )
 
 func (a *API) CreateMeme(ctx context.Context, board models.BoardID, filename string, dsc map[string]string) (models.MemeID, error) {
+	if err := a.aclPostMeme(ctx, board); err != nil {
+		return "", fmt.Errorf("acl failed: %w", err)
+	}
+
 	meme := models.Meme{BoardID: board, Filename: filename, Description: dsc}
 	id, err := a.storage.InsertMeme(ctx, meme)
 	if err != nil {
@@ -19,6 +23,10 @@ func (a *API) CreateMeme(ctx context.Context, board models.BoardID, filename str
 }
 
 func (a *API) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, error) {
+	if err := a.aclGetMeme(ctx, id); err != nil {
+		return models.Meme{}, fmt.Errorf("acl failed: %w", err)
+	}
+
 	logger := slog.Default().With("from", "API.GetMeme")
 	logger.InfoContext(ctx, "Started", "id", id)
 
@@ -35,6 +43,10 @@ func (a *API) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, e
 }
 
 func (a *API) UpdateMeme(ctx context.Context, id models.MemeID, board *models.BoardID, filename *string, dsc *map[string]string) (models.Meme, error) {
+	if err := a.aclUpdateMeme(ctx, id); err != nil {
+		return models.Meme{}, fmt.Errorf("acl failed: %w", err)
+	}
+
 	meme, err := a.GetMemeByID(ctx, id)
 	if err != nil {
 		return models.Meme{}, fmt.Errorf("can't get meme: %w", err)
@@ -68,6 +80,10 @@ func (a *API) UpdateMeme(ctx context.Context, id models.MemeID, board *models.Bo
 }
 
 func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) error {
+	if err := a.aclDeleteMeme(ctx, id); err != nil {
+		return fmt.Errorf("acl failed: %w", err)
+	}
+
 	logger := slog.Default().With("from", "API.DeleteMeme")
 	logger.InfoContext(ctx, "Started", "id", id)
 
@@ -84,7 +100,12 @@ func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) error {
 }
 
 func (a *API) ListMemes(ctx context.Context, offset, limit int, sortBy string) ([]models.Meme, error) {
-	memes, err := a.storage.ListMemes(ctx, models.ListMemesRequest{Offset: offset, Limit: limit, SortBy: sortBy})
+	userID := GetUserID(ctx)
+	if userID == "" {
+		return nil, ErrUnauthorized
+	}
+
+	memes, err := a.storage.ListMemes(ctx, userID, offset, limit, sortBy)
 	if err != nil {
 		return nil, fmt.Errorf("can't list memes: %w", err)
 	}

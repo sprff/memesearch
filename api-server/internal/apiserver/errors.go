@@ -35,10 +35,12 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, api.ErrMediaNotFound),
 		errors.Is(err, api.ErrMemeNotFound),
 		errors.Is(err, api.ErrUserNotFound),
-		errors.Is(err, api.ErrBoardNotFound):
+		errors.Is(err, api.ErrBoardNotFound),
+		errors.Is(err, api.ErrSubNotFound):
 
 		w.WriteHeader(http.StatusNotFound)
-		resultErr = Error{Id: unwrapErr(err).Error()}
+		w.Write([]byte(unwrapErr(err).Error()))
+		return
 
 	case errors.Is(err, api.ErrUnauthorized):
 		w.WriteHeader(http.StatusUnauthorized)

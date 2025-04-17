@@ -83,6 +83,10 @@ func (a *API) DeleteBoard(ctx context.Context, id models.BoardID) (models.Board,
 
 func (a *API) ListBoards(ctx context.Context, offset, limit int, sortBy string) ([]models.Board, error) {
 	userID := GetUserID(ctx)
+	if userID == "" {
+		return nil, ErrUnauthorized
+	}
+
 	boards, err := a.storage.ListBoards(ctx, userID, offset, limit, sortBy)
 	if err != nil {
 		return nil, fmt.Errorf("can't list boards: %w", err)

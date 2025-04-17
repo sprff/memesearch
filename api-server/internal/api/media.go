@@ -9,6 +9,10 @@ import (
 )
 
 func (a *API) GetMedia(ctx context.Context, id models.MediaID) (models.Media, error) {
+	if err := a.aclGetMedia(ctx, id); err != nil {
+		return models.Media{}, fmt.Errorf("acl failed: %w", err)
+	}
+
 	logger := slog.Default().With("from", "API.GetMedia")
 	logger.InfoContext(ctx, "Started", "id", id)
 
@@ -26,6 +30,10 @@ func (a *API) GetMedia(ctx context.Context, id models.MediaID) (models.Media, er
 }
 
 func (a *API) SetMedia(ctx context.Context, media models.Media) error {
+	if err := a.aclUpdateMedia(ctx, media.ID); err != nil {
+		return fmt.Errorf("acl failed: %w", err)
+	}
+
 	logger := slog.Default().With("from", "API.SetMedia")
 	logger.InfoContext(ctx, "Started", "id", media.ID)
 
