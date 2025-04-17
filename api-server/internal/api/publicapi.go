@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"memesearch/internal/config"
-	"memesearch/internal/memesearcher"
 	"memesearch/internal/models"
+	"memesearch/internal/searchranker"
 	"memesearch/internal/storage"
 )
 
@@ -13,11 +13,11 @@ type API struct {
 	api *api
 }
 
-func New(s storage.Storage, secrets config.SecretConfig, searcher memesearcher.Searcher) *API {
+func New(s storage.Storage, secrets config.SecretConfig, ranker searchranker.Ranker) *API {
 	return &API{&api{
-		storage:  s,
-		secrets:  secrets,
-		searcher: searcher,
+		storage: s,
+		secrets: secrets,
+		ranker:  ranker,
 	}}
 }
 
@@ -162,6 +162,9 @@ func (a *API) Authorize(ctx context.Context, token string) (context.Context, err
 	return a.api.Authorize(ctx, token)
 }
 
-func (a *API) SearchMemeByBoardID(ctx context.Context, id models.BoardID, dsc map[string]string, offset, limit int, sortBy string) ([]models.Meme, error) {
-	return a.api.SearchMemeByBoardID(ctx, id, dsc, offset, limit, sortBy)
+func (a *API) Search(ctx context.Context, req map[string]string, offset, limit int) ([]searchranker.ScroredMeme, error) {
+	if len(req) == 0 {
+		return nil, ErrInvalid{"reqest", "request shouldn't be empty"}
+	}
+	return a.api.Search(ctx, req, offset, limit)
 }

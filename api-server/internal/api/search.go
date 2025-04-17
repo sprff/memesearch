@@ -5,26 +5,30 @@ import (
 	"fmt"
 	"log/slog"
 	"memesearch/internal/models"
+	"memesearch/internal/searchranker"
 )
 
-func (a *api) SearchMemeByBoardID(ctx context.Context, id models.BoardID, dsc map[string]string, offset, limit int, sortBy string) ([]models.Meme, error) {
+func (a *api) Search(ctx context.Context, req map[string]string, offset, limit int) ([]searchranker.ScroredMeme, error) {
 	logger := slog.Default().With("from", "api.SearchMemeByBoardID")
 	logger.InfoContext(ctx, "Started")
 
-	engine := a.searcher.GetMemeEngine("")
-	scores, err := engine.SearchForBoard(ctx, id, dsc, offset, limit, sortBy)
-	if err != nil {
-		return nil, fmt.Errorf("can't search for board: %w", err)
-	}
-	logger.Debug("Search scores", "scores", scores)
-	memes := make([]models.Meme, 0, len(scores))
-
-	for _, score := range scores {
-		meme, err := a.storage.MemeRepo.GetMemeByID(ctx, score.ID)
+	batchSize := 200
+	memes := []models.Meme{}
+	listOffset := 0
+	for {
+		nmemes, err := a.ListMemes(ctx, listOffset, batchSize, "id")
 		if err != nil {
-			return nil, fmt.Errorf("can't get meme by id %s: %w", score.ID, err)
+			return nil, fmt.Errorf("can't list memes with offset %d: %w", listOffset, err)
 		}
-		memes = append(memes, meme)
+		if len(nmemes) == 0 {
+			break
+		}
+		listOffset += batchSize
+		memes = append(memes, nmemes...)
 	}
-	return memes, nil
+	res, err := a.ranker.Rank(memes, req)
+	if err != nil {
+		return nil, fmt.Errorf("can't rank: %w", err)
+	}
+	return res, nil
 }

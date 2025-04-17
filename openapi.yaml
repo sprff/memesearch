@@ -230,17 +230,15 @@ paths:
         '404':
           description: Media not found
 
-  /search/byboard/{boardID}:
+  /search:
     get:
       tags:
         - Search
       summary: Search memes on fixed board
       operationId: SearchByBoardID
       parameters:
-        - $ref: '#/components/parameters/boardId'
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/pageSize'
-        - $ref: '#/components/parameters/sortBy'
         - in: query
           name: general
           schema:
@@ -251,7 +249,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ScoredMemes'
+                $ref: '#/components/schemas/PaginatedScoredMemes'
         '400':
           description: Bad request
           content:
@@ -652,8 +650,17 @@ components:
         name:
           type: string
 
-    MemeScore:
-      $ref: '#/components/schemas/Meme'
+    ScoredMeme:
+      type: object
+      required:
+        - score
+        - meme
+      properties:
+        score:
+          type: number
+          format: double
+        meme:
+          $ref: '#/components/schemas/Meme'
 
     Error:
       type: object
@@ -681,7 +688,7 @@ components:
           items:
             $ref: '#/components/schemas/Meme'
 
-    ScoredMemes:
+    PaginatedScoredMemes:
       type: object
       required:
         - items
@@ -691,7 +698,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/MemeScore'
+            $ref: '#/components/schemas/ScoredMeme'
 
     UserCreate:
       type: object

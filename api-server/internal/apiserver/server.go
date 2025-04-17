@@ -202,19 +202,19 @@ func (s ServerImpl) UpdateMemeByID(ctx context.Context, request UpdateMemeByIDRe
 
 // SearchByBoardID implements StrictServerInterface.
 func (s ServerImpl) SearchByBoardID(ctx context.Context, request SearchByBoardIDRequestObject) (SearchByBoardIDResponseObject, error) {
-	boardID, page, pageSize, sortBy, dsc, err := request.GetParams()
+	page, pageSize, dsc, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	memes, err := s.api.SearchMemeByBoardID(ctx, boardID, dsc, (page-1)*pageSize, pageSize, sortBy)
+	memes, err := s.api.Search(ctx, dsc, (page-1)*pageSize, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("can't search: %w", err)
 	}
 
-	conv := make([]Meme, 0, len(memes))
+	conv := make([]ScoredMeme, 0, len(memes))
 	for _, m := range memes {
-		conv = append(conv, convertMemeToServer(m))
+		conv = append(conv, convertScoredMemeToServer(m))
 	}
 
 	return SearchByBoardID200JSONResponse{Items: conv}, nil

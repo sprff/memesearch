@@ -46,12 +46,9 @@ var (
 )
 
 func (r SearchByBoardIDRequestObject) GetParams() (
-	id models.BoardID, page, pageSize int, sortBy string, dsc map[string]string, err error) {
+	page, pageSize int, dsc map[string]string, err error) {
 	page = DefaultPage
 	pageSize = DefaultPageSize
-	sortBy = DefaultSortBy
-
-	id = models.BoardID(r.BoardID)
 
 	if r.Params.Page != nil {
 		page = *r.Params.Page
@@ -66,14 +63,6 @@ func (r SearchByBoardIDRequestObject) GetParams() (
 	}
 	if pageSize < 1 || pageSize > 100 {
 		err = invalidInput("pageSize", "must be 1 <= pageSize <= 100")
-		return
-	}
-
-	if r.Params.SortBy != nil {
-		sortBy = string(*r.Params.SortBy)
-	}
-	if !slices.Contains(AllowedSortBy, sortBy) {
-		err = invalidInput("sortBy", "sortBy must be one of %v", AllowedSortBy)
 		return
 	}
 

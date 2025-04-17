@@ -8,7 +8,7 @@ import (
 	"memesearch/internal/apiserver/middleware"
 	"memesearch/internal/config"
 	"memesearch/internal/contextlogger"
-	"memesearch/internal/memesearcher"
+	"memesearch/internal/searchranker"
 	"memesearch/internal/storage"
 	"net/http"
 	"os"
@@ -20,9 +20,8 @@ func main() {
 	cfg := getConfig()
 	s, err := storage.New(cfg)
 	processError("Failed to create storage", err)
-	searcher, err := memesearcher.New(cfg)
-	processError("Failed to create searcher", err)
-	api := api.New(s, cfg.Secrets, searcher)
+	ranker := &searchranker.DefaultRanker{}
+	api := api.New(s, cfg.Secrets, ranker)
 	server := apiserver.NewHandler(api, []middleware.Middleware{middleware.Logger(), middleware.Auth(api)})
 	slog.Info("Run server", "port", cfg.Server.Port)
 	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", cfg.Server.Port), server)

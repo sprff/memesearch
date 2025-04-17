@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"memesearch/internal/api"
 	"memesearch/internal/models"
+	"memesearch/internal/searchranker"
 	"net/http"
 	"slices"
 )
@@ -23,21 +24,6 @@ func NewHandler(api *api.API, middlewares []StrictMiddlewareFunc) http.Handler {
 	return handler
 }
 
-func convertMemeToModel(m Meme) (models.Meme, error) {
-	dsc, err := convertMapToString(m.Description)
-	if err != nil {
-		return models.Meme{}, fmt.Errorf("can't convert meme: %w", err)
-	}
-	return models.Meme{
-		ID:          models.MemeID(m.Id),
-		BoardID:     models.BoardID(m.BoardId),
-		Filename:    m.Filename,
-		Description: dsc,
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
-	}, nil
-}
-
 func convertMemeToServer(m models.Meme) Meme {
 	dsc := convertMapToAny(m.Description)
 	return Meme{
@@ -47,6 +33,13 @@ func convertMemeToServer(m models.Meme) Meme {
 		Description: dsc,
 		CreatedAt:   m.CreatedAt,
 		UpdatedAt:   m.UpdatedAt,
+	}
+}
+
+func convertScoredMemeToServer(m searchranker.ScroredMeme) ScoredMeme {
+	return ScoredMeme{
+		Score: m.Score,
+		Meme:  convertMemeToServer(m.Meme),
 	}
 }
 
@@ -68,14 +61,6 @@ func convertMapToAny(m map[string]string) map[string]any {
 		dsc[k] = v
 	}
 	return dsc
-}
-
-func convertBoardToModel(m Board) models.Board {
-	return models.Board{
-		ID:    models.BoardID(m.Id),
-		Owner: models.UserID(m.Owner),
-		Name:  m.Name,
-	}
 }
 
 func convertBoardToServer(m models.Board) Board {
