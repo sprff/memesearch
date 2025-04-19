@@ -8,14 +8,17 @@ import (
 	"memesearch/internal/models"
 )
 
-func (a *api) CreateMeme(ctx context.Context, board models.BoardID, filename string, dsc map[string]string) (models.MemeID, error) {
+func (a *api) CreateMeme(ctx context.Context, board models.BoardID, filename string, dsc map[string]string) (models.Meme, error) {
 	meme := models.Meme{BoardID: board, Filename: filename, Description: dsc}
 	id, err := a.storage.InsertMeme(ctx, meme)
 	if err != nil {
-		return "", fmt.Errorf("can't create meme: %w", err)
+		return models.Meme{}, fmt.Errorf("can't create meme: %w", err)
 	}
-
-	return id, nil
+	meme, err = a.storage.GetMemeByID(ctx, id)
+	if err != nil {
+		return models.Meme{}, fmt.Errorf("can't get meme: %w", err)
+	}
+	return meme, nil
 }
 
 func (a *api) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, error) {

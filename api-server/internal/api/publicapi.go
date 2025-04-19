@@ -71,9 +71,9 @@ func (a *API) SetMedia(ctx context.Context, media models.Media) error {
 	return a.api.SetMedia(ctx, media)
 }
 
-func (a *API) CreateMeme(ctx context.Context, board models.BoardID, filename string, dsc map[string]string) (models.MemeID, error) {
+func (a *API) CreateMeme(ctx context.Context, board models.BoardID, filename string, dsc map[string]string) (models.Meme, error) {
 	if err := a.validateBoard(ctx, board, "meme's board"); err != nil {
-		return models.MemeID(""), err
+		return models.Meme{}, err
 	}
 
 	return a.api.CreateMeme(ctx, board, filename, dsc)

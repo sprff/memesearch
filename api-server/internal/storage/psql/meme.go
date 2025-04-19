@@ -78,7 +78,6 @@ func (m *MemeStore) GetMemesByBoardID(ctx context.Context, id models.BoardID, of
 		}
 		memes = append(memes, meme)
 	}
-	slog.DebugContext(ctx, "convert result", "memes", mps)
 
 	return memes, nil
 }
@@ -134,7 +133,6 @@ func (m *MemeStore) ListMemes(ctx context.Context, userID models.UserID, offset,
 		}
 		memes = append(memes, meme)
 	}
-	slog.DebugContext(ctx, "convert result", "memes", mps)
 
 	return memes, nil
 }

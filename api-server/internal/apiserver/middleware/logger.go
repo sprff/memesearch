@@ -7,6 +7,7 @@ import (
 	"memesearch/internal/contextlogger"
 	"memesearch/internal/utils"
 	"net/http"
+	"net/url"
 
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
@@ -17,20 +18,27 @@ func Logger() func(f strictnethttp.StrictHTTPHandlerFunc, operationID string) st
 	return func(f strictnethttp.StrictHTTPHandlerFunc, operationID string) strictnethttp.StrictHTTPHandlerFunc {
 		return func(_ context.Context, w http.ResponseWriter, r *http.Request, request any) (response any, err error) {
 			id := r.Header.Get("X-Request-ID")
+
 			if id == "" {
 				id = utils.GenereateUUIDv7()
+			} else if len(id) > 255 {
+				id = id[:255]
 			}
 			w.Header().Add("X-Request-ID", id)
-
 			ctx := contextlogger.AppendCtx(r.Context(), slog.String("request_id", id))
-			slog.InfoContext(ctx, fmt.Sprintf("%s %s start", r.Method, r.RequestURI))
+
+			uri, err := url.QueryUnescape(r.RequestURI)
+			if err != nil {
+				slog.ErrorContext(ctx, "Can't unescape query", "query", r.RequestURI, "err", err)
+			}
+			slog.InfoContext(ctx, fmt.Sprintf("%s %s start", r.Method, uri))
 			*r = *r.WithContext(ctx)
 			res, err := f(ctx, w, r, request)
 			ctx = r.Context()
 			if err != nil {
-				slog.WarnContext(ctx, fmt.Sprintf("%s %s failed", r.Method, r.RequestURI), "err", err)
+				slog.WarnContext(ctx, fmt.Sprintf("%s %s failed", r.Method, uri), "err", err)
 			} else {
-				slog.InfoContext(ctx, fmt.Sprintf("%s %s finished", r.Method, r.RequestURI))
+				slog.InfoContext(ctx, fmt.Sprintf("%s %s finished", r.Method, uri))
 			}
 
 			return res, err

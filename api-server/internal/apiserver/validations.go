@@ -45,7 +45,7 @@ var (
 	AllowedSortBy = []string{"id", "createdAt", "updatedAt"}
 )
 
-func (r SearchByBoardIDRequestObject) GetParams() (
+func (r SearchMemesRequestObject) GetParams() (
 	page, pageSize int, dsc map[string]string, err error) {
 	page = DefaultPage
 	pageSize = DefaultPageSize
@@ -102,7 +102,7 @@ func (r ListMemesRequestObject) GetParams() (
 	return
 }
 
-func getDescriptionMap(p SearchByBoardIDParams) map[string]string {
+func getDescriptionMap(p SearchMemesParams) map[string]string {
 	m := map[string]string{}
 	if p.General != nil {
 		m["general"] = *p.General

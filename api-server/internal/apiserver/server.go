@@ -112,12 +112,12 @@ func (s ServerImpl) PostMeme(ctx context.Context, request PostMemeRequestObject)
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	id, err := s.api.CreateMeme(ctx, board, filename, dsc)
+	meme, err := s.api.CreateMeme(ctx, board, filename, dsc)
 	if err != nil {
 		return nil, fmt.Errorf("can't create meme: %w", err)
 	}
 
-	return PostMeme200JSONResponse{Id: string(id)}, nil
+	return PostMeme200JSONResponse(convertMemeToServer(meme)), nil
 }
 
 // PutMediaByID implements StrictServerInterface.
@@ -137,6 +137,7 @@ func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDReques
 	}
 
 	fileHeader := files[0]
+	filename := fileHeader.Filename
 	file, err := fileHeader.Open()
 	if err != nil {
 		return nil, fmt.Errorf("can't open file: %w", err)
@@ -181,6 +182,10 @@ func (s ServerImpl) PutMediaByID(ctx context.Context, request PutMediaByIDReques
 	if err != nil {
 		return nil, fmt.Errorf("can't set media: %w", err)
 	}
+	_, err = s.api.UpdateMeme(ctx, models.MemeID(request.MediaID), nil, &filename, nil)
+	if err != nil {
+		return nil, fmt.Errorf("can't set filename: %w", err)
+	}
 
 	return PutMediaByID200Response{}, nil
 }
@@ -201,7 +206,7 @@ func (s ServerImpl) UpdateMemeByID(ctx context.Context, request UpdateMemeByIDRe
 }
 
 // SearchByBoardID implements StrictServerInterface.
-func (s ServerImpl) SearchByBoardID(ctx context.Context, request SearchByBoardIDRequestObject) (SearchByBoardIDResponseObject, error) {
+func (s ServerImpl) SearchMemes(ctx context.Context, request SearchMemesRequestObject) (SearchMemesResponseObject, error) {
 	page, pageSize, dsc, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
@@ -217,7 +222,7 @@ func (s ServerImpl) SearchByBoardID(ctx context.Context, request SearchByBoardID
 		conv = append(conv, convertScoredMemeToServer(m))
 	}
 
-	return SearchByBoardID200JSONResponse{Items: conv}, nil
+	return SearchMemes200JSONResponse{Items: conv}, nil
 
 }
 
