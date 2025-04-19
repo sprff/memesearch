@@ -4,22 +4,26 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestClient(t *testing.T) {
 	c, err := New("http://localhost:1781")
-	if err != nil {
-		fmt.Println("err", err)
-	}
-
+	require.NoError(t, err)
 	ctx := context.Background()
 
-	meme, err := c.GetMemeByID(ctx, "01962b847b4e7e41a2d78ef05bf56f7a")
-	fmt.Println("meme", meme)
-	fmt.Println("err", err)
-
-	meme, err = c.GetMemeByID(ctx, "01962b847b4e7e41a2d78ef05bf56f7a2")
-	fmt.Println("meme", meme)
-	fmt.Println("err", err)
-
+	t.Logf("request id: %s", c.GenerateID())
+	t.Run("Auth", func(t *testing.T) {
+		login := fmt.Sprintf("testuser%d", time.Now().Unix())
+		password := "password"
+		_, err := c.AuthRegister(ctx, login, password)
+		require.NoError(t, err)
+		token, err := c.AuthLogin(ctx, login, password)
+		require.NoError(t, err)
+		c.SetToken(token)
+		_, err = c.AuthWhoami(ctx)
+		require.NoError(t, err)
+	})
 }

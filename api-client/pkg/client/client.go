@@ -6,229 +6,567 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"mime/multipart"
+	"net/http"
 )
 
+var _ ClientInterface = Client{}
+
 type Client struct {
-	api *apiclient.ClientWithResponses
+	api       *apiclient.ClientWithResponses
+	token     string
+	requestId string
 }
 
-func New(url string) (*Client, error) {
+type ClientInterface interface {
+	About(ctx context.Context) (info map[string]any, err error)
+	AuthRegister(ctx context.Context, login, password string) (id models.UserID, err error)
+	AuthLogin(ctx context.Context, login, password string) (token string, err error)
+	AuthWhoami(ctx context.Context) (user models.User, err error)
+	ListBoards(ctx context.Context, page, pageSize int, sortBy string) (boards []models.Board, err error)
+	PostBoard(ctx context.Context, name string) (board models.Board, err error)
+	DeleteBoardByID(ctx context.Context, boardID models.BoardID) (board models.Board, err error)
+	GetBoardByID(ctx context.Context, boardID models.BoardID) (board models.Board, err error)
+	UpdateBoardByID(ctx context.Context, boardID models.BoardID, name *string, owner *models.UserID) (board models.Board, err error)
+	GetMediaByID(ctx context.Context, mediaID models.MediaID) (media models.Media, err error)
+	PutMediaByID(ctx context.Context, media models.Media) (err error)
+	ListMemes(ctx context.Context, page, pageSize int, sortBy string) (boards []models.Meme, err error)
+	PostMeme(ctx context.Context, boardID models.BoardID, filename string, dsc map[string]string) (meme models.Meme, err error)
+	DeleteMemeByID(ctx context.Context, memeID models.MemeID) (meme models.Meme, err error)
+	GetMemeByID(ctx context.Context, memeID models.MemeID) (meme models.Meme, err error)
+	UpdateMemeByID(ctx context.Context, memeID models.MemeID, boardID *models.BoardID, filename *string, dsc *map[string]string) (meme models.Meme, err error)
+	SearchMemes(ctx context.Context, page, pageSize int, general string) (memes []models.ScoredMeme, err error)
+	SubscribeByBoardID(ctx context.Context, boardID models.BoardID) (err error)
+	UnsubscribeByBoardID(ctx context.Context, boardID models.BoardID) (err error)
+	GetUserByID(ctx context.Context, userID models.UserID) (user models.User, err error)
+}
+
+func New(url string) (Client, error) {
 	c, err := apiclient.NewClientWithResponses(url)
 	if err != nil {
-		return nil, fmt.Errorf("can't create client with responses: %w", err)
+		return Client{}, fmt.Errorf("can't create client with responses: %w", err)
 	}
-	return &Client{api: c}, nil
-
+	return Client{api: c}, nil
 }
 
-// Meme
+// About implements ClientInterface.
+func (c Client) About(ctx context.Context) (info map[string]any, err error) {
+	info = make(map[string]any)
+	resp, err := c.api.AboutWithResponse(ctx, c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		info["apiname"] = resp.JSON200.ApiName
+		info["version"] = resp.JSON200.Version
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	default:
+		return nil, fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+	}
+}
 
-func (c *Client) PostMeme(ctx context.Context, meme models.Meme) (models.MemeID, error) {
-	req := apiclient.MemeCreate{BoardId: string(meme.BoardID)}
-	if meme.Descriptions != nil {
-		desc := map[string]any{}
-		for k, v := range meme.Descriptions {
-			desc[k] = v
+// AuthLogin implements ClientInterface.
+func (c Client) AuthLogin(ctx context.Context, login string, password string) (token string, err error) {
+	resp, err := c.api.AuthLoginWithResponse(ctx, apiclient.AuthLoginJSONRequestBody{Login: login, Password: password}, c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		token = resp.JSON200.Token
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrUserNotFound
+		return
+	case 400:
+		err = parseApiError(*resp.JSON400)
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// AuthRegister implements ClientInterface.
+func (c Client) AuthRegister(ctx context.Context, login string, password string) (id models.UserID, err error) {
+	resp, err := c.api.AuthRegisterWithResponse(ctx, apiclient.AuthRegisterJSONRequestBody{Login: login, Password: password}, c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		id = models.UserID(resp.JSON200.Id)
+		return
+	case 400:
+		err = parseApiError(*resp.JSON400)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 409:
+		err = models.ErrLoginExists
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// AuthWhoami implements ClientInterface.
+func (c Client) AuthWhoami(ctx context.Context) (user models.User, err error) {
+	resp, err := c.api.AuthWhoamiWithResponse(ctx, c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		user = convertUserToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// DeleteBoardByID implements ClientInterface.
+func (c Client) DeleteBoardByID(ctx context.Context, boardID models.BoardID) (board models.Board, err error) {
+	resp, err := c.api.DeleteBoardByIDWithResponse(ctx, apiclient.BoardId(boardID), c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		board = convertBoardToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrBoardNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// DeleteMemeByID implements ClientInterface.
+func (c Client) DeleteMemeByID(ctx context.Context, memeID models.MemeID) (meme models.Meme, err error) {
+	resp, err := c.api.DeleteMemeByIDWithResponse(ctx, apiclient.MemeId(memeID), c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		// TODO
+		// meme = convertMemeToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrMemeNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// GetBoardByID implements ClientInterface.
+func (c Client) GetBoardByID(ctx context.Context, boardID models.BoardID) (board models.Board, err error) {
+	resp, err := c.api.GetBoardByIDWithResponse(ctx, apiclient.BoardId(boardID), c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		board = convertBoardToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrBoardNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// GetMediaByID implements ClientInterface.
+func (c Client) GetMediaByID(ctx context.Context, mediaID models.MediaID) (media models.Media, err error) {
+	resp, err := c.api.GetMediaByIDWithResponse(ctx, apiclient.MediaId(mediaID), c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		media.Body = resp.Body
+		media.ID = mediaID
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrMediaNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// GetMemeByID implements ClientInterface.
+func (c Client) GetMemeByID(ctx context.Context, memeID models.MemeID) (meme models.Meme, err error) {
+	resp, err := c.api.GetMemeByIDWithResponse(ctx, apiclient.MemeId(memeID), c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		meme = convertMemeToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrMemeNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// GetUserByID implements ClientInterface.
+func (c Client) GetUserByID(ctx context.Context, userID models.UserID) (user models.User, err error) {
+	resp, err := c.api.GetUserByIDWithResponse(ctx, apiclient.UserId(userID), c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		user = convertUserToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrUserNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// ListBoards implements ClientInterface.
+func (c Client) ListBoards(ctx context.Context, page int, pageSize int, sortBy string) (boards []models.Board, err error) {
+	req := &apiclient.ListBoardsParams{Page: &page, PageSize: &pageSize, SortBy: (*apiclient.ListBoardsParamsSortBy)(&sortBy)}
+	resp, err := c.api.ListBoardsWithResponse(ctx, req, c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		//TODO unify have(ListMemes) and don't have(ListBoards) items
+		for _, b := range *resp.JSON200 {
+			boards = append(boards, convertBoardToModel(b))
 		}
-		req.Description = &desc
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
 	}
-	if meme.Filename != "" {
-		req.Filename = &meme.Filename
-	}
-
-	resp, err := c.api.PostMemeWithResponse(ctx, req)
-	if err != nil {
-		return models.MemeID(""), fmt.Errorf("can't post meme: %w", err)
-	}
-
-	if resp.JSON201 != nil {
-		return models.MemeID(resp.JSON201.Id), nil
-	}
-	if resp.JSON400 != nil {
-		return models.MemeID(""), parseApiError(*resp.JSON400)
-	}
-	return models.MemeID(""), fmt.Errorf("unexpected response")
 }
 
-func (c *Client) GetMemeByID(ctx context.Context, id models.MemeID) (models.Meme, error) {
-
-	resp, err := c.api.GetMemeByIDWithResponse(ctx, apiclient.MemeId(id))
+// ListMemes implements ClientInterface.
+func (c Client) ListMemes(ctx context.Context, page int, pageSize int, sortBy string) (memes []models.Meme, err error) {
+	req := &apiclient.ListMemesParams{Page: &page, PageSize: &pageSize, SortBy: (*apiclient.ListMemesParamsSortBy)(&sortBy)}
+	resp, err := c.api.ListMemesWithResponse(ctx, req, c.middlewares()...)
 	if err != nil {
-		return models.Meme{}, fmt.Errorf("can't get meme: %w", err)
+		err = fmt.Errorf("can't request: %w", err)
+		return
 	}
-	if resp.JSON200 != nil {
-		return convertToModel(*resp.JSON200), nil
-	}
-	if resp.JSON404 != nil {
-		return models.Meme{}, parseApiError(*resp.JSON404)
-	}
-	return models.Meme{}, fmt.Errorf("unexpected response")
-
-}
-
-func (c *Client) PutMeme(ctx context.Context, meme models.Meme) (models.Meme, error) {
-	req := apiclient.MemeUpdate{}
-	if meme.BoardID != "" {
-		req.BoardId = (*string)(&meme.BoardID)
-	}
-	if meme.Filename != "" {
-		req.Filename = &meme.Filename
-	}
-	if meme.Descriptions != nil {
-		dsc := convertMapToAny(meme.Descriptions)
-		req.Description = &dsc
-	}
-
-	resp, err := c.api.UpdateMemeByIDWithResponse(ctx, apiclient.MemeId(meme.ID), req)
-	if err != nil {
-		return models.Meme{}, fmt.Errorf("can't update meme: %w", err)
-	}
-	if resp.JSON200 != nil {
-		return convertToModel(*resp.JSON200), nil
-	}
-	if resp.JSON404 != nil {
-		return models.Meme{}, parseApiError(*resp.JSON404)
-	}
-	if resp.JSON400 != nil {
-		return models.Meme{}, parseApiError(*resp.JSON400)
-	}
-	return models.Meme{}, fmt.Errorf("unexpected response")
-}
-
-func (c *Client) DeleteMeme(ctx context.Context, id models.MemeID) error {
-	resp, err := c.api.DeleteMemeByIDWithResponse(ctx, apiclient.MemeId(id))
-	if err != nil {
-		return fmt.Errorf("can't delete meme: %w", err)
-	}
-	if resp.StatusCode() == 204 {
-		return nil
-	}
-	if resp.JSON404 != nil {
-		return parseApiError(*resp.JSON404)
-	}
-
-	return fmt.Errorf("unexpected response: %s", "")
-}
-
-// Media
-
-func (c *Client) PutMedia(ctx context.Context, media models.Media, filename string) error {
-	body, contentType, err := createMultipart("media", filename, media.Body)
-	if err != nil {
-		return fmt.Errorf("can't create multipart: %w", err)
-	}
-
-	resp, err := c.api.PutMediaByIDWithBodyWithResponse(ctx, apiclient.MediaId(media.ID), contentType, body)
-	if err != nil {
-		return fmt.Errorf("can't put media: %w", err)
-	}
-	if resp.StatusCode() == 200 {
-		return nil
-	}
-	if resp.JSON400 != nil {
-		return parseApiError(*resp.JSON400)
-	}
-	return fmt.Errorf("unexpected response: %s", resp.Body)
-}
-
-func (c *Client) GetMedia(ctx context.Context, id models.MediaID) (models.Media, error) {
-	resp, err := c.api.GetMediaByIDWithResponse(ctx, apiclient.MediaId(id))
-	if err != nil {
-		return models.Media{}, fmt.Errorf("can't put media: %w", err)
-	}
-	if resp.StatusCode() == 200 {
-		return models.Media{ID: id, Body: resp.Body}, nil
-	}
-	if resp.JSON404 != nil {
-		return models.Media{}, parseApiError(*resp.JSON404)
-	}
-	return models.Media{}, fmt.Errorf("unexpected response")
-}
-
-// Search
-func (c *Client) SearchMemeByBoardID(ctx context.Context, boardID models.BoardID, page int, general string) ([]models.Meme, error) {
-	req := &apiclient.SearchByBoardIDParams{
-		Page:    &page,
-		General: &general,
-	}
-
-	resp, err := c.api.SearchByBoardIDWithResponse(ctx, apiclient.BoardId(boardID), req)
-	if err != nil {
-		return nil, fmt.Errorf("can't search meme: %w", err)
-	}
-	if resp.JSON200 != nil {
-		memes := make([]models.Meme, 0, len(resp.JSON200.Items))
+	switch resp.StatusCode() {
+	case 200:
 		for _, m := range resp.JSON200.Items {
-			memes = append(memes, convertToModel(m))
+			memes = append(memes, convertMemeToModel(m))
 		}
-		return memes, nil
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
 	}
-	if resp.JSON400 != nil {
-		return nil, parseApiError(*resp.JSON404)
-	}
-	if resp.JSON404 != nil {
-		return nil, parseApiError(*resp.JSON404)
-	}
-	return nil, fmt.Errorf("unexpected response")
-
 }
 
-func convertToModel(meme apiclient.Meme) models.Meme {
-	dsc := map[string]string{}
-	if meme.Description != nil {
-		for k, v := range *meme.Description {
-			dsc[k] = v.(string)
-		}
-	}
-	m := models.Meme{
-		ID:           models.MemeID(meme.Id),
-		BoardID:      models.BoardID(meme.BoardId),
-		Descriptions: dsc,
-		Filename:     unptr(meme.Filename),
-		CreatedAt:    meme.CreatedAt,
-		UpdatedAt:    meme.UpdatedAt,
-	}
-	return m
-}
-
-func unptr[T any](v *T) (res T) {
-	if v != nil {
-		res = *v
-	}
-	return res
-}
-
-func convertMapToAny(o map[string]string) map[string]any {
-	dsc := map[string]any{}
-	for k, v := range o {
-		dsc[k] = v
-	}
-	return dsc
-}
-
-func createMultipart(fieldName, filename string, data []byte) (*bytes.Buffer, string, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	// Создаем часть формы для файла
-	part, err := writer.CreateFormFile(fieldName, filename)
+// PostBoard implements ClientInterface.
+func (c Client) PostBoard(ctx context.Context, name string) (board models.Board, err error) {
+	req := apiclient.PostBoardJSONRequestBody{Name: name}
+	resp, err := c.api.PostBoardWithResponse(ctx, req, c.middlewares()...)
 	if err != nil {
-		return nil, "", err
+		err = fmt.Errorf("can't request: %w", err)
+		return
 	}
+	switch resp.StatusCode() {
+	case 200:
+		board = convertBoardToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
 
-	// Записываем данные в часть формы
-	_, err = io.Copy(part, bytes.NewReader(data))
+// PostMeme implements ClientInterface.
+func (c Client) PostMeme(ctx context.Context, boardID models.BoardID, filename string, dsc map[string]string) (meme models.Meme, err error) {
+	req := apiclient.PostMemeJSONRequestBody{BoardId: string(boardID), Filename: filename, Description: convertMapToAny(dsc)}
+	resp, err := c.api.PostMemeWithResponse(ctx, req, c.middlewares()...)
 	if err != nil {
-		return nil, "", err
+		err = fmt.Errorf("can't request: %w", err)
+		return
 	}
+	switch resp.StatusCode() {
+	case 200:
+		meme = convertMemeToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrMemeNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
 
-	// Закрываем writer - это важно для корректного завершения multipart-сообщения
-	err = writer.Close()
+// PutMediaByID implements ClientInterface.
+func (c Client) PutMediaByID(ctx context.Context, media models.Media) (err error) {
+	contentType := http.DetectContentType(media.Body)
+	resp, err := c.api.PutMediaByIDWithBodyWithResponse(ctx, apiclient.MediaId(media.ID), contentType, bytes.NewBuffer(media.Body), c.middlewares()...)
 	if err != nil {
-		return nil, "", err
+		err = fmt.Errorf("can't request: %w", err)
+		return
 	}
+	switch resp.StatusCode() {
+	case 200:
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrMediaNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
 
-	return body, writer.FormDataContentType(), nil
+// SearchByBoardID implements ClientInterface.
+func (c Client) SearchMemes(ctx context.Context, page int, pageSize int, general string) (memes []models.ScoredMeme, err error) {
+	req := &apiclient.SearchMemesParams{Page: &page, PageSize: &pageSize, General: &general}
+	resp, err := c.api.SearchMemesWithResponse(ctx, req, c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// SubscribeByBoardID implements ClientInterface.
+func (c Client) SubscribeByBoardID(ctx context.Context, boardID models.BoardID) (err error) {
+	resp, err := c.api.SubscribeByBoardIDWithResponse(ctx, apiclient.BoardId(boardID), c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// UnsubscribeByBoardID implements ClientInterface.
+func (c Client) UnsubscribeByBoardID(ctx context.Context, boardID models.BoardID) (err error) {
+	resp, err := c.api.UnsubscribeByBoardIDWithResponse(ctx, apiclient.BoardId(boardID), c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrSubNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// UpdateBoardByID implements ClientInterface.
+func (c Client) UpdateBoardByID(ctx context.Context, boardID models.BoardID, name *string, owner *models.UserID) (board models.Board, err error) {
+	req := apiclient.UpdateBoardByIDJSONRequestBody{Name: name, Owner: (*string)(owner)}
+	resp, err := c.api.UpdateBoardByIDWithResponse(ctx, apiclient.BoardId(boardID), req, c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		board = convertBoardToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 400:
+		err = parseApiError(*resp.JSON400)
+		return
+	case 404:
+		err = models.ErrBoardNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
+}
+
+// UpdateMemeByID implements ClientInterface.
+func (c Client) UpdateMemeByID(ctx context.Context, memeID models.MemeID, boardID *models.BoardID, filename *string, dsc *map[string]string) (meme models.Meme, err error) {
+	req := apiclient.UpdateMemeByIDJSONRequestBody{BoardId: (*string)(boardID), Filename: filename}
+	if dsc != nil {
+		req.Description = ptr(convertMapToAny(*dsc))
+	}
+	resp, err := c.api.UpdateMemeByIDWithResponse(ctx, apiclient.MemeId(memeID), req, c.middlewares()...)
+	if err != nil {
+		err = fmt.Errorf("can't request: %w", err)
+		return
+	}
+	switch resp.StatusCode() {
+	case 200:
+		meme = convertMemeToModel(*resp.JSON200)
+		return
+	case 401:
+		err = models.ErrUnauthorized
+		return
+	case 403:
+		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrMemeNotFound
+		return
+	default:
+		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
+		return
+	}
 }
