@@ -24,8 +24,6 @@ func Auth(a *api.API) func(f strictnethttp.StrictHTTPHandlerFunc, operationID st
 					*r = *r.WithContext(ctx)
 					slog.DebugContext(ctx, "Authorized")
 				} else if err == api.ErrInvalidToken {
-					w.WriteHeader(http.StatusUnauthorized)
-					w.Write([]byte("Invalid token"))
 					return nil, err
 				}
 			}

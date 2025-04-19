@@ -146,7 +146,7 @@ func (a *API) aclDeleteMeme(ctx context.Context, id models.MemeID) error {
 func (a *API) aclGetMedia(ctx context.Context, id models.MediaID) error {
 	err := a.aclGetMeme(ctx, models.MemeID(id))
 	if err != nil {
-		return fmt.Errorf("acl update meme failed: %w", err)
+		return fmt.Errorf("acl get meme failed: %w", err)
 	}
 	return nil
 }

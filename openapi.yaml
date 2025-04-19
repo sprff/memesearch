@@ -79,13 +79,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - id
-                properties:
-                  id:
-                    type: string
-                    example: "d290f1ee6c544b0190e6d701748f0851"
+                $ref: '#/components/schemas/Meme'
         '400':
           description: Invalid input data
           content:
@@ -163,6 +157,11 @@ paths:
       responses:
         '200':
           description: Meme deleted successfully
+          # TODO
+          # content:
+          #   application/json:
+          #     schema:
+          #       $ref: '#/components/schemas/Meme'
         '404':
           description: Meme not found
 
@@ -235,7 +234,7 @@ paths:
       tags:
         - Search
       summary: Search memes on fixed board
-      operationId: SearchByBoardID
+      operationId: SearchMemes
       parameters:
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/pageSize'
@@ -419,6 +418,12 @@ paths:
                     type: string
         '404':
           description: Wrong login or password
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/whoami:
     post:
@@ -449,11 +454,8 @@ paths:
             schema:
               type: object
               required:
-                - owner
                 - name
               properties:
-                owner:
-                  type: string
                 name:
                   type: string
 
@@ -466,6 +468,12 @@ paths:
                 $ref: '#/components/schemas/Board'
         '401':
           description: Unauthorized
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
     get:
       tags:
@@ -542,6 +550,13 @@ paths:
           description: Don't have rights to update board
         '401':
           description: Unauthorized
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
     delete:
       parameters:
         - $ref: '#/components/parameters/boardId'

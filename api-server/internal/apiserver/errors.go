@@ -59,11 +59,22 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(unwrapErr(err).Error()))
 		return
+	case errors.Is(err, api.ErrInvalidToken):
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Invalid token"))
+		return
 
 	case errors.As(err, &invalidParam):
 		b := map[string]any{invalidParam.ParamName: invalidParam.Err.Error()}
 		resultErr = Error{Id: "INVALID_REQUEST", Body: &b}
+		w.Header().Add("Content-type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
+		body, err := json.MarshalIndent(resultErr, "", " ")
+		if err != nil {
+			slog.ErrorContext(ctx, "Can't marshall json", "err", err)
+		}
+		w.Write(body)
+		return
 
 	default:
 		slog.ErrorContext(ctx, "Unexpected error", "err", err)
@@ -71,11 +82,6 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
-	body, err := json.MarshalIndent(resultErr, "", " ")
-	if err != nil {
-		slog.ErrorContext(ctx, "Can't marshall json", "err", err)
-	}
-	w.Write(body)
 }
 
 func unwrapErr(err error) error {
