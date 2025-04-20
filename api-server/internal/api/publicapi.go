@@ -75,6 +75,9 @@ func (a *API) CreateMeme(ctx context.Context, board models.BoardID, filename str
 	if err := a.validateBoard(ctx, board, "meme's board"); err != nil {
 		return models.Meme{}, err
 	}
+	if err := a.aclPostMeme(ctx, board); err != nil {
+		return models.Meme{}, fmt.Errorf("acl failed: %w", err)
+	}
 
 	return a.api.CreateMeme(ctx, board, filename, dsc)
 }
@@ -119,6 +122,9 @@ func (a *API) Unsubscribe(ctx context.Context, user models.UserID, board models.
 }
 
 func (a *API) Subscribe(ctx context.Context, user models.UserID, board models.BoardID, role string) error {
+	if _, err := a.GetBoardByID(ctx, board); err != nil {
+		return fmt.Errorf("can't get board: %w", err)
+	}
 	if err := a.aclSubscribe(ctx, user, board, role); err != nil {
 		return fmt.Errorf("acl failed: %w", err)
 	}

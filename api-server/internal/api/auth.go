@@ -24,6 +24,11 @@ func (a *api) AuthRegister(ctx context.Context, login string, password string) (
 	slog.InfoContext(ctx, "New user registered",
 		"id", id,
 		"login", login)
+	err = a.Subscribe(ctx, id, "default", "sub")
+	if err != nil {
+		slog.WarnContext(ctx, "Can't subscribe to default", "err", err)
+	}
+
 	return id, nil
 }
 

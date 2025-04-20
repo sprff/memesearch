@@ -22,6 +22,23 @@ func (a *API) aclUpdateBoard(ctx context.Context, id models.BoardID) error {
 	if userID == "" {
 		return ErrUnauthorized
 	}
+
+	board, err := a.api.GetBoardByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("can't get board: %w", err)
+	}
+	if board.Owner != userID {
+		return ErrForbidden
+	}
+	return nil
+}
+
+func (a *API) aclPostToBoard(ctx context.Context, id models.BoardID) error {
+	userID := GetUserID(ctx)
+	if userID == "" {
+		return ErrUnauthorized
+	}
+
 	board, err := a.api.GetBoardByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("can't get board: %w", err)
@@ -57,7 +74,7 @@ func (a *API) aclPostMeme(ctx context.Context, id models.BoardID) error {
 		return ErrUnauthorized
 	}
 
-	err := a.aclUpdateBoard(ctx, id)
+	err := a.aclPostToBoard(ctx, id)
 	if err != nil {
 		return fmt.Errorf("acl update board failed: %w", err)
 	}
@@ -108,7 +125,7 @@ func (a *API) aclUpdateMeme(ctx context.Context, id models.MemeID) error {
 		return fmt.Errorf("can't get board: %w", err)
 	}
 
-	err = a.aclUpdateBoard(ctx, board.ID)
+	err = a.aclPostToBoard(ctx, board.ID)
 	if err != nil {
 		return fmt.Errorf("acl update board failed: %w", err)
 	}
@@ -132,7 +149,7 @@ func (a *API) aclDeleteMeme(ctx context.Context, id models.MemeID) error {
 		return fmt.Errorf("can't get board: %w", err)
 	}
 
-	err = a.aclDeleteBoard(ctx, board.ID)
+	err = a.aclUpdateBoard(ctx, board.ID)
 	if err != nil {
 		return fmt.Errorf("acl update board failed: %w", err)
 	}

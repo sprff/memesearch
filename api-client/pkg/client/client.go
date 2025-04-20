@@ -3,10 +3,8 @@ package client
 import (
 	"api-client/internal/apiclient"
 	"api-client/pkg/models"
-	"bytes"
 	"context"
 	"fmt"
-	"net/http"
 )
 
 var _ ClientInterface = Client{}
@@ -28,7 +26,7 @@ type ClientInterface interface {
 	GetBoardByID(ctx context.Context, boardID models.BoardID) (board models.Board, err error)
 	UpdateBoardByID(ctx context.Context, boardID models.BoardID, name *string, owner *models.UserID) (board models.Board, err error)
 	GetMediaByID(ctx context.Context, mediaID models.MediaID) (media models.Media, err error)
-	PutMediaByID(ctx context.Context, media models.Media) (err error)
+	PutMediaByID(ctx context.Context, media models.Media, filename string) (err error)
 	ListMemes(ctx context.Context, page, pageSize int, sortBy string) (boards []models.Meme, err error)
 	PostMeme(ctx context.Context, boardID models.BoardID, filename string, dsc map[string]string) (meme models.Meme, err error)
 	DeleteMemeByID(ctx context.Context, memeID models.MemeID) (meme models.Meme, err error)
@@ -416,9 +414,9 @@ func (c Client) PostMeme(ctx context.Context, boardID models.BoardID, filename s
 }
 
 // PutMediaByID implements ClientInterface.
-func (c Client) PutMediaByID(ctx context.Context, media models.Media) (err error) {
-	contentType := http.DetectContentType(media.Body)
-	resp, err := c.api.PutMediaByIDWithBodyWithResponse(ctx, apiclient.MediaId(media.ID), contentType, bytes.NewBuffer(media.Body), c.middlewares()...)
+func (c Client) PutMediaByID(ctx context.Context, media models.Media, filename string) (err error) {
+	body, cType, err := createMultipart("media", filename, media.Body)
+	resp, err := c.api.PutMediaByIDWithBodyWithResponse(ctx, apiclient.MediaId(media.ID), cType, body, c.middlewares()...)
 	if err != nil {
 		err = fmt.Errorf("can't request: %w", err)
 		return
@@ -451,6 +449,9 @@ func (c Client) SearchMemes(ctx context.Context, page int, pageSize int, general
 	}
 	switch resp.StatusCode() {
 	case 200:
+		for _, m := range resp.JSON200.Items {
+			memes = append(memes, convertScoredToModel(m))
+		}
 		return
 	case 401:
 		err = models.ErrUnauthorized
@@ -479,6 +480,9 @@ func (c Client) SubscribeByBoardID(ctx context.Context, boardID models.BoardID) 
 		return
 	case 403:
 		err = models.ErrForbidden
+		return
+	case 404:
+		err = models.ErrBoardNotFound
 		return
 	default:
 		err = fmt.Errorf("unexpected response %d: %s", resp.StatusCode(), string(resp.Body))
