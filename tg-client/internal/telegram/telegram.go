@@ -57,10 +57,6 @@ func (b *MSBot) SendMessageReply(ctx context.Context, chatID int64, text string,
 	return m.MessageID, nil
 }
 
-func (b *MSBot) SendError(ctx context.Context, chatID int64, msg string) {
-	_, _ = b.SendMessage(ctx, chatID, fmt.Sprintf("error: %s\nrequest-id: <code>%s</code>", msg, "id"))
-}
-
 type MediaGroupEntry struct {
 	ID       string
 	Filename string
@@ -71,7 +67,7 @@ type MediaGroupEntry struct {
 func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []MediaGroupEntry) {
 	mediaGroup := make([]interface{}, 0, len(medias))
 	for _, media := range medias {
-		file := tgbotapi.FileBytes{Name: media.Filename, Bytes: media.Body}
+		file := tgbotapi.FileID(media.ID)
 		switch path.Ext(media.Filename) {
 		case ".jpg", ".png":
 			inputMedia := tgbotapi.NewInputMediaPhoto(file)
@@ -83,7 +79,7 @@ func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []Media
 			inputMedia.Caption = media.Caption
 			mediaGroup = append(mediaGroup, inputMedia)
 		default:
-			b.SendError(ctx, chatID, "Unexpected file format")
+			b.SendMessage(ctx, chatID, "Unexpected file format")
 			slog.ErrorContext(ctx, "Unexpected file format",
 				"filename", media.Filename)
 		}

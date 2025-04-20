@@ -13,6 +13,7 @@ type RequestContext struct {
 	Bot       *telegram.MSBot
 	Event     *tgbotapi.Update
 	ApiClient *client.Client
+	UserInfo  *UserInfo
 }
 
 func (r RequestContext) MustChat() int64 {
@@ -31,9 +32,6 @@ func (r RequestContext) SendMessageReply(text string, replyTo int) (int, error) 
 	return r.Bot.SendMessageReply(r.Ctx, r.MustChat(), text, replyTo)
 }
 
-func (r RequestContext) SendError(msg string) {
-	r.Bot.SendError(r.Ctx, r.MustChat(), msg)
-}
 
 func (r RequestContext) SendMediaGroup(medias []telegram.MediaGroupEntry) {
 	r.Bot.SendMediaGroup(r.Ctx, r.MustChat(), medias)

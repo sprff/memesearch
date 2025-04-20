@@ -11,7 +11,7 @@ import (
 
 func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 	ctx := r.Ctx
-	memes, err := r.ApiClient.SearchMemeByBoardID(ctx, "board", 1, q.Query)
+	memes, err := r.ApiClient.SearchMemes(ctx, 1, 10, q.Query)
 	if err != nil {
 		slog.ErrorContext(ctx, "Can't search", "err", err)
 		return
@@ -19,10 +19,11 @@ func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 
 	inlineResponse := []any{}
 	for _, meme := range memes {
-		entry, err := prepareMeme(meme, r)
+		entry, err := prepareMeme(meme.Meme, r)
 
 		if err != nil {
 			slog.ErrorContext(ctx, "Can't prepare meme", "err", err)
+			continue
 		}
 		inlineResponse = append(inlineResponse, entry)
 	}
@@ -31,7 +32,7 @@ func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 
 func prepareMeme(meme models.Meme, r RequestContext) (any, error) {
 	ctx := r.Ctx
-	media, err := r.ApiClient.GetMedia(ctx, models.MediaID(meme.ID))
+	media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
 	if err != nil {
 		return nil, fmt.Errorf("can't get media: %w", err)
 	}

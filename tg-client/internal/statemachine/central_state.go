@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path"
+	"strings"
 	"tg-client/internal/telegram"
 )
 
@@ -13,20 +15,54 @@ var _ State = &CentralState{}
 type CentralState struct {
 }
 
-func (d *CentralState) Process(r RequestContext) (State, error) {
+func (s *CentralState) Process(r RequestContext) (State, error) {
 	switch {
+	case isCommand(r):
+		spl := strings.Split(r.Event.Message.Text, " ")
+		cmd := spl[0]
+		args := spl[1:]
+		switch cmd {
+		case "/login":
+			err := doLogin(r, args[0], args[1])
+			return s, err
+		case "/whoami":
+			err := doWhoami(r)
+			return s, err
+		case "/setboard":
+			err := doSetBoard(r, models.BoardID(args[0]))
+			return s, err
+		case "/getboard":
+			err := doGetBoard(r)
+			return s, err
+		case "/subscribe":
+			err := doSubscribe(r, models.BoardID(args[0]))
+			return s, err
+		case "/unsubscribe":
+			err := doUnsubscribe(r, models.BoardID(args[0]))
+			return s, err
+		default:
+			r.SendMessage("Unknown command, please use help")
+			return s, nil
+		}
 	case isSearchRequest(r):
 		doSearchRequest(r)
 		return &CentralState{}, nil
-	case isAddPhoto(r):
-		doAddMedia(r)
-		return &CentralState{}, nil
+	case isAddPhoto(r), isAddVideo(r):
+		err := doAddMedia(r)
+		return &CentralState{}, err
 	case isAddVideo(r):
 		doAddMedia(r)
 		return &CentralState{}, nil
 	default:
 		return &CentralState{}, nil
 	}
+}
+
+func isCommand(r RequestContext) bool {
+	if r.Event == nil || r.Event.Message == nil {
+		return false
+	}
+	return strings.HasPrefix(r.Event.Message.Text, "/")
 }
 
 func isSearchRequest(r RequestContext) bool {
@@ -45,41 +81,50 @@ func isSearchRequest(r RequestContext) bool {
 	return msg.Text != ""
 }
 
-func doSearchRequest(r RequestContext) {
+func doSearchRequest(r RequestContext) error {
 	ctx := r.Ctx
 	msg := r.Event.Message
 	text := msg.Text
 	slog.InfoContext(ctx, "doSearchRequest")
-	memes, err := r.ApiClient.SearchMemeByBoardID(ctx, "board", 1, text)
+	memes, err := r.ApiClient.SearchMemes(ctx, 1, 10, text)
 	if err != nil {
-		slog.ErrorContext(ctx, "can't do serch request",
-			"error", err.Error())
-		r.SendMessage("can't do search request")
+		return fmt.Errorf("can't do search request: %w", err)
+
 	}
 	sendMemes(memes, r)
+	return nil
 }
 
-func sendMemes(memes []models.Meme, r RequestContext) {
+func sendMemes(memes []models.ScoredMeme, r RequestContext) {
 	ctx := r.Ctx
 	mges := []telegram.MediaGroupEntry{}
-	for _, meme := range memes {
-		caption := fmt.Sprintf("ID:%s\nBoard:%s\nDesc:%s", meme.ID, meme.BoardID, meme.Descriptions)
-		media, err := r.ApiClient.GetMedia(ctx, models.MediaID(meme.ID))
+	for _, m := range memes {
+		meme := m.Meme
+		caption := fmt.Sprintf("ID:%s\nScore:%v\nBoard:%s\nDesc:%s", meme.ID, m.Score, meme.BoardID, meme.Descriptions)
+		media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
 		if err != nil {
 			switch {
 			case errors.Is(err, models.ErrMediaNotFound):
-				r.SendError("Meme don't have media")
+				r.SendMessage("Meme don't have media")
 				slog.WarnContext(ctx, "Meme don't have media",
 					"meme_id", meme.ID)
 			default:
-				r.SendError("Unexpected error")
+				r.SendMessage("Unexpected error")
 				slog.ErrorContext(ctx, "Can't get media",
 					"error", err.Error(),
 					"meme_id", meme.ID)
 			}
 			continue
 		}
-		mges = append(mges, telegram.MediaGroupEntry{Filename: meme.Filename, Caption: caption, Body: media.Body})
+		fileID, err := r.Bot.GetFileID(string(meme.ID), path.Ext(meme.Filename), media.Body)
+		if err != nil {
+			r.SendMessage("Unexpected error")
+			slog.ErrorContext(ctx, "Can't get media",
+				"error", err.Error(),
+				"meme_id", meme.ID)
+			continue
+		}
+		mges = append(mges, telegram.MediaGroupEntry{ID: fileID.ID, Filename: meme.Filename, Caption: caption, Body: media.Body})
 	}
 	r.SendMediaGroup(mges)
 }
@@ -116,36 +161,25 @@ func isAddVideo(r RequestContext) bool {
 	return true
 }
 
-func doAddMedia(r RequestContext) {
+func doAddMedia(r RequestContext) error {
 	ctx := r.Ctx
 	msg := r.Event.Message
 	filename, media, err := r.Bot.GetFileBytes(msg)
 	if err != nil {
-		slog.ErrorContext(ctx, "can't get file bytes",
-			"err", err.Error(),
-			"msg", msg)
-		return
+		return fmt.Errorf("can't get files: %w", err)
+
 	}
 
-	id, err := r.ApiClient.PostMeme(ctx, models.Meme{
-		BoardID:      "board",
-		Filename:     filename,
-		Descriptions: map[string]string{"general": msg.Caption},
-	})
+	meme, err := r.ApiClient.PostMeme(ctx, r.UserInfo.activeBoard, filename, map[string]string{"general": msg.Caption})
 	if err != nil {
-		r.SendError("can't create meme")
-		slog.ErrorContext(ctx, "can't create meme",
-			"error", err.Error())
-		return
+		return fmt.Errorf("can't create meme: %w", err)
 	}
-	err = r.ApiClient.PutMedia(ctx, models.Media{ID: models.MediaID(id), Body: media}, filename)
+	err = r.ApiClient.PutMediaByID(ctx, models.Media{ID: models.MediaID(meme.ID), Body: media}, filename)
 	if err != nil {
-		r.SendError("can't set media")
-		slog.ErrorContext(ctx, "can't set media",
-			"error", err.Error())
-		return
+		return fmt.Errorf("can't set media: %w", err)
 	}
 	slog.InfoContext(ctx, "Meme created",
-		"id", id)
-	r.SendMessageReply(fmt.Sprintf("<code>%s</code>", id), msg.MessageID)
+		"id", meme.ID)
+	r.SendMessageReply(fmt.Sprintf("<code>%s</code>", meme.ID), msg.MessageID)
+	return nil
 }
