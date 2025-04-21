@@ -4,8 +4,22 @@ import (
 	"api-client/pkg/models"
 	"errors"
 	"fmt"
+	"log/slog"
 )
 
+func doRegister(r RequestContext, login, password string) error {
+	ctx := r.Ctx
+
+	_, err := r.ApiClient.AuthRegister(ctx, login, password)
+	if err != nil {
+		return fmt.Errorf("can't register: %w", err)
+	}
+	err = doLogin(r, login, password)
+	if err != nil {
+		return fmt.Errorf("can't do whoami: %w", err)
+	}
+	return nil
+}
 func doLogin(r RequestContext, login, password string) error {
 	ctx := r.Ctx
 
@@ -103,8 +117,14 @@ func sendError(r RequestContext, err error) {
 		errors.Is(err, models.ErrSubNotFound),
 		errors.Is(err, models.ErrUnauthorized),
 		errors.Is(err, models.ErrUserNotFound),
+		errors.Is(err, ErrBadCommandUsage),
 		errors.Is(err, models.ErrInvalidInput{}):
 		r.SendMessage(unwrap(err).Error())
+		slog.InfoContext(r.Ctx, "Expected error", "err", unwrap(err).Error())
+	default:
+		id := r.ApiClient.GetID()
+		r.SendMessage(fmt.Sprintf("unexpected error: %s", id))
+		slog.ErrorContext(r.Ctx, "Error in processing", "err", err, "event", r.Event)
 
 	}
 }

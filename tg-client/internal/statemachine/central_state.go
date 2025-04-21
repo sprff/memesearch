@@ -2,6 +2,7 @@ package statemachine
 
 import (
 	"api-client/pkg/models"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -13,6 +14,8 @@ var _ State = &CentralState{}
 type CentralState struct {
 }
 
+var ErrBadCommandUsage = errors.New("Wrong command usage. Please use help")
+
 func (s *CentralState) Process(r RequestContext) (State, error) {
 	switch {
 	case isCommand(r):
@@ -20,22 +23,40 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 		cmd := spl[0]
 		args := spl[1:]
 		switch cmd {
+		case "/register":
+			if len(args) < 2 {
+				return s, ErrBadCommandUsage
+			}
+			err := doRegister(r, args[0], args[1])
+			return s, err
 		case "/login":
+			if len(args) < 2 {
+				return s, ErrBadCommandUsage
+			}
 			err := doLogin(r, args[0], args[1])
 			return s, err
 		case "/whoami":
 			err := doWhoami(r)
 			return s, err
 		case "/setboard":
+			if len(args) < 1 {
+				return s, ErrBadCommandUsage
+			}
 			err := doSetBoard(r, models.BoardID(args[0]))
 			return s, err
 		case "/getboard":
 			err := doGetBoard(r)
 			return s, err
 		case "/subscribe":
+			if len(args) < 1 {
+				return s, ErrBadCommandUsage
+			}
 			err := doSubscribe(r, models.BoardID(args[0]))
 			return s, err
 		case "/unsubscribe":
+			if len(args) < 1 {
+				return s, ErrBadCommandUsage
+			}
 			err := doUnsubscribe(r, models.BoardID(args[0]))
 			return s, err
 		default:

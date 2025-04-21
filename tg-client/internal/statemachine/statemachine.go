@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"tg-client/internal/contextlogger"
 	"tg-client/internal/kvstore"
 	"tg-client/internal/telegram"
 
@@ -64,21 +65,23 @@ func (s *Statemachine) processUpdate(ctx context.Context, u tgbotapi.Update) {
 	if user == nil {
 		return
 	}
-	id := strconv.FormatInt(user.ID, 10)
-	if _, ok := s.userinfo.Get(id); !ok {
-		s.userinfo.Set(id, UserInfo{ActiveBoard: "default"})
+	userID := strconv.FormatInt(user.ID, 10)
+	if _, ok := s.userinfo.Get(userID); !ok {
+		s.userinfo.Set(userID, UserInfo{ActiveBoard: "default"})
 	}
-	info, _ := s.userinfo.Get(id)
+	info, _ := s.userinfo.Get(userID)
 	c := s.client.WithToken(info.Token)
+	rid := c.GenerateID()
+
 	r := RequestContext{
-		Ctx:       ctx,
+		Ctx:       contextlogger.AppendCtx(ctx, slog.String("request_id", rid)),
 		Bot:       s.bot,
 		Event:     &u,
 		ApiClient: &c,
 		UserInfo:  &info,
 	}
 	defer func(i *UserInfo) {
-		s.userinfo.Set(id, *i)
+		s.userinfo.Set(userID, *i)
 	}(&info)
 
 	if chat := u.FromChat(); chat != nil {
@@ -90,9 +93,6 @@ func (s *Statemachine) processUpdate(ctx context.Context, u tgbotapi.Update) {
 		}
 		nw, err := s.states[chat.ID].Process(r)
 		if err != nil {
-			slog.ErrorContext(ctx, "can't process state",
-				"err", err.Error(),
-				"update", u)
 			sendError(r, err)
 			return
 		}
