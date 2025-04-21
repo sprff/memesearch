@@ -421,6 +421,10 @@ func (c Client) PostMeme(ctx context.Context, boardID models.BoardID, filename s
 // PutMediaByID implements ClientInterface.
 func (c Client) PutMediaByID(ctx context.Context, media models.Media, filename string) (err error) {
 	body, cType, err := createMultipart("media", filename, media.Body)
+	if err != nil {
+		err = fmt.Errorf("can't create multipart: %w", err)
+		return
+	}
 	resp, err := c.api.PutMediaByIDWithBodyWithResponse(ctx, apiclient.MediaId(media.ID), cType, body, c.middlewares()...)
 	if err != nil {
 		err = fmt.Errorf("can't request: %w", err)
