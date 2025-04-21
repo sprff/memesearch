@@ -38,6 +38,9 @@ func (a *API) aclPostToBoard(ctx context.Context, id models.BoardID) error {
 	if userID == "" {
 		return ErrUnauthorized
 	}
+	if id == "default" {
+		return nil
+	}
 
 	board, err := a.api.GetBoardByID(ctx, id)
 	if err != nil {
