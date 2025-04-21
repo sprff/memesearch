@@ -2,11 +2,11 @@ package statemachine
 
 import (
 	"api-client/pkg/models"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
-	"tg-client/internal/telegram"
 )
 
 var _ State = &CentralState{}
@@ -29,6 +29,12 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 			}
 			err := doRegister(r, args[0], args[1])
 			return s, err
+		case "/search":
+			text := strings.Join(args[:], " ")
+			mv := MediaViewState{page: 1, getMedias: func(ctx context.Context, page, pageSize int) ([]models.ScoredMeme, error) {
+				return r.ApiClient.SearchMemes(ctx, page, pageSize, text)
+			}}
+			return mv.Process(r)
 		case "/login":
 			if len(args) < 2 {
 				return s, ErrBadCommandUsage
@@ -63,15 +69,9 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 			r.SendMessage("Unknown command, please use help")
 			return s, nil
 		}
-	case isSearchRequest(r):
-		err := doSearchRequest(r)
-		return &CentralState{}, err
 	case isAddPhoto(r), isAddVideo(r):
 		err := doAddMedia(r)
 		return &CentralState{}, err
-	case isAddVideo(r):
-		doAddMedia(r)
-		return &CentralState{}, nil
 	default:
 		return &CentralState{}, nil
 	}
@@ -82,61 +82,6 @@ func isCommand(r RequestContext) bool {
 		return false
 	}
 	return strings.HasPrefix(r.Event.Message.Text, "/")
-}
-
-func isSearchRequest(r RequestContext) bool {
-	if r.Event == nil || r.Event.Message == nil {
-		return false
-	}
-	msg := r.Event.Message
-	if len(msg.Photo) != 0 ||
-		msg.Video != nil ||
-		msg.Audio != nil ||
-		msg.Document != nil ||
-		msg.Voice != nil {
-		return false
-	}
-
-	return msg.Text != ""
-}
-
-func doSearchRequest(r RequestContext) error {
-	ctx := r.Ctx
-	msg := r.Event.Message
-	text := msg.Text
-	slog.InfoContext(ctx, "doSearchRequest")
-	memes, err := r.ApiClient.SearchMemes(ctx, 1, 10, text)
-	if err != nil {
-		return fmt.Errorf("can't do search request: %w", err)
-	}
-
-	if len(memes) == 0 {
-		return models.ErrMemeNotFound
-	}
-	sendMemes(memes, r)
-	return nil
-}
-
-func sendMemes(memes []models.ScoredMeme, r RequestContext) {
-	ctx := r.Ctx
-	mges := []telegram.MediaGroupEntry{}
-	for _, m := range memes {
-		meme := m.Meme
-		caption := fmt.Sprintf("ID:%s\nScore:%v\nBoard:%s\nDesc:%s", meme.ID, m.Score, meme.BoardID, meme.Descriptions)
-		fileID, err := r.Bot.GetFileID(string(meme.ID), func() ([]byte, error) {
-			media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
-			return media.Body, err
-		})
-		if err != nil {
-			r.SendMessage("Unexpected error")
-			slog.ErrorContext(ctx, "Can't get media",
-				"error", err.Error(),
-				"meme_id", meme.ID)
-			continue
-		}
-		mges = append(mges, telegram.MediaGroupEntry{ID: fileID.ID, Filename: meme.Filename, Caption: caption})
-	}
-	r.SendMediaGroup(mges)
 }
 
 func isAddPhoto(r RequestContext) bool {

@@ -31,7 +31,7 @@ func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 
 func prepareMeme(meme models.Meme, r RequestContext) (any, error) {
 	ctx := r.Ctx
-	cm, err := r.Bot.GetFileID(string(meme.ID), func() ([]byte, error) {
+	cm, err := r.Bot.GetCachedMedia(string(meme.ID), func() ([]byte, error) {
 		media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
 		return media.Body, err
 	})

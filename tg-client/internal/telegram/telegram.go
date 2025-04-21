@@ -65,20 +65,23 @@ type MediaGroupEntry struct {
 	ID       string
 	Filename string
 	Caption  string
-	Body     []byte
+	MIMEType string
 }
 
 func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []MediaGroupEntry) {
+	if len(medias) > 10 {
+		panic("expected <= 10 medias per group")
+	}
 	mediaGroup := make([]interface{}, 0, len(medias))
 	for _, media := range medias {
 		file := tgbotapi.FileID(media.ID)
-		switch path.Ext(media.Filename) {
-		case ".jpg", ".png":
+		switch media.MIMEType {
+		case "photo":
 			inputMedia := tgbotapi.NewInputMediaPhoto(file)
 			inputMedia.Caption = media.Caption
 			mediaGroup = append(mediaGroup, inputMedia)
 
-		case ".mp4":
+		case "video":
 			inputMedia := tgbotapi.NewInputMediaVideo(file)
 			inputMedia.Caption = media.Caption
 			mediaGroup = append(mediaGroup, inputMedia)
@@ -91,8 +94,14 @@ func (b *MSBot) SendMediaGroup(ctx context.Context, chatID int64, medias []Media
 
 	msg := tgbotapi.NewMediaGroup(chatID, mediaGroup)
 	_, _ = b.bot.Send(msg)
-
 }
+
+type KeyboardItem struct {
+	Text string
+	ID   string
+}
+
+
 
 func (b *MSBot) GetFileBytes(message *tgbotapi.Message) (string, []byte, error) {
 	var fileID string
@@ -152,7 +161,7 @@ type CachedMedia struct {
 
 }
 
-func (b *MSBot) GetFileID(key string, getBody func() ([]byte, error)) (res CachedMedia, err error) {
+func (b *MSBot) GetCachedMedia(key string, getBody func() ([]byte, error)) (res CachedMedia, err error) {
 	if cm, ok := b.cache.Get(key); ok {
 		return cm, nil
 	}
