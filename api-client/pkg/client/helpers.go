@@ -112,7 +112,6 @@ func (c *Client) GenerateID() string {
 }
 
 func (c *Client) GetID() string {
-	c.requestId = utils.GenereateUUIDv7()
 	return c.requestId
 }
 
