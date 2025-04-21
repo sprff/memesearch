@@ -27,6 +27,11 @@ func (a *api) Search(ctx context.Context, req map[string]string, offset, limit i
 		memes = append(memes, nmemes...)
 	}
 	res, err := a.ranker.Rank(memes, req)
+	begin := min(offset, len(res))
+	end := min(offset+limit, len(res))
+
+	res = res[begin:end]
+
 	if err != nil {
 		return nil, fmt.Errorf("can't rank: %w", err)
 	}
