@@ -1,7 +1,6 @@
 package telegram
 
 import (
-	"api-client/pkg/models"
 	"bytes"
 	"context"
 	"errors"
@@ -10,23 +9,28 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
+	"tg-client/internal/kvstore"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type MSBot struct {
 	bot   *tgbotapi.BotAPI
-	cache map[string]CachedMedia
+	cache kvstore.Store[CachedMedia]
 }
 
-func NewMSBot(token string) (*MSBot, error) {
+func NewMSBot(token string, datadir string) (*MSBot, error) {
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, err
 	}
+	cache, err := kvstore.New[CachedMedia](fmt.Sprintf("%s/cache.db", datadir))
+	if err != nil {
+		return nil, fmt.Errorf("can't create kv: %w", err)
+	}
 	return &MSBot{
 		bot:   bot,
-		cache: make(map[string]CachedMedia),
+		cache: cache,
 	}, nil
 }
 
@@ -125,47 +129,6 @@ func (b *MSBot) GetFileBytes(message *tgbotapi.Message) (string, []byte, error) 
 	return path.Base(fileURL), buf.Bytes(), nil
 }
 
-func (b *MSBot) Test(q *tgbotapi.InlineQuery, medias []models.Media) {
-	res := []any{}
-
-	for i := range len(medias) {
-		// Отправляем фото в чат с самим ботом (или другой чат) для получения file_id
-		file := tgbotapi.FileBytes{Name: "vieo.mp4", Bytes: medias[i].Body}
-		// file := tgbotapi.FileURL("https://sprff.ru/hui.jpg")
-		msg := tgbotapi.NewVideo(472209097, file)
-		sentMsg, err := b.bot.Send(msg)
-		if err != nil {
-			slog.Error("Can't upload video:", "err", err)
-			return
-		}
-
-		// Получаем file_id из отправленного сообщения
-		fileID := sentMsg.Video.FileID // Берем самый большой размер (обычно последний)
-		slog.Info("Photo file id", "file_id", fileID)
-		fileURL := "https://tonystrains.com/media/catalog/product/cache/dd5bb7a1af8b3e6696a4fc1cd228b61a/2/g/2gb_micro_sd_card.jpg"
-
-		slog.Info("fileURL", "fileURL", fileURL)
-		photo := tgbotapi.NewInlineQueryResultCachedVideo(fmt.Sprintf("test_%d", i), fileID, "Title")
-		// photo.ThumbURL = "https://tonystrains.com/media/catalog/product/cache/dd5bb7a1af8b3e6696a4fc1cd228b61a/2/g/2gb_micro_sd_card.jpg"
-		// photo.Title = "Title"
-		// photo.Description = "LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONG DESC"
-		res = append(res, photo)
-		// video := tgbotapi.NewInlineQueryResultVideo(fmt.Sprintf("test_video_%d", i), fileURL)
-		// video.ThumbURL = "https://avatars.mds.yandex.net/i?id=10ccd7d2b5e15699ec1ee14eb62a60fb_l-5220614-images-thumbs&n=13"
-		// video.MimeType = "video/mp4"
-		// video.Title = "Title"
-		// res = append(res, video)
-
-	}
-
-	// video := tgbotapi.NewInlineQueryResultVideo("3", fileURL)
-	// video.ThumbURL = "https://avatars.mds.yandex.net/i?id=10ccd7d2b5e15699ec1ee14eb62a60fb_l-5220614-images-thumbs&n=13"
-	// video.MimeType = "video/mp4"
-	// video.Description = "LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONG DESC"
-	// video.Title = "Title"
-	b.AnswerInlineQuery(context.Background(), q.ID, res, "50")
-
-}
 func (b *MSBot) AnswerInlineQuery(ctx context.Context, inlineQueryID string, results []any, next_offset string) error {
 	config := tgbotapi.InlineConfig{
 		InlineQueryID: inlineQueryID,
@@ -189,13 +152,20 @@ type CachedMedia struct {
 
 }
 
-func (b *MSBot) GetFileID(key string, ext string, body []byte) (res CachedMedia, err error) {
-	if cm, ok := b.cache[key]; ok {
+func (b *MSBot) GetFileID(key string, getBody func() ([]byte, error)) (res CachedMedia, err error) {
+	if cm, ok := b.cache.Get(key); ok {
 		return cm, nil
 	}
-	sendTo := int64(472209097)
-	switch ext {
-	case ".mp4":
+	body, err := getBody()
+	if err != nil {
+		return CachedMedia{}, fmt.Errorf("can't get body: %w", err)
+	}
+
+	sendTo := int64(-1002391398173)
+	contentType := http.DetectContentType(body)
+
+	switch contentType {
+	case "video/mp4":
 		file := tgbotapi.FileBytes{Name: "vieo.mp4", Bytes: body}
 		msg := tgbotapi.NewVideo(sendTo, file)
 		sentMsg, err := b.bot.Send(msg)
@@ -203,9 +173,10 @@ func (b *MSBot) GetFileID(key string, ext string, body []byte) (res CachedMedia,
 			return res, fmt.Errorf("can't send message: %w", err)
 		}
 		fileID := sentMsg.Video.FileID
-		b.cache[key] = CachedMedia{ID: fileID, Type: "video"}
-		return b.cache[key], nil
-	case ".png", ".jpg", ".jpeg":
+		cm := CachedMedia{ID: fileID, Type: "video"}
+		b.cache.Set(key, cm)
+		return cm, nil
+	case "image/png", "image/jpg", "image/jpeg":
 		file := tgbotapi.FileBytes{Name: "photo.jpg", Bytes: body}
 		msg := tgbotapi.NewPhoto(sendTo, file)
 		sentMsg, err := b.bot.Send(msg)
@@ -213,10 +184,11 @@ func (b *MSBot) GetFileID(key string, ext string, body []byte) (res CachedMedia,
 			return res, fmt.Errorf("can't send message: %w", err)
 		}
 		fileID := sentMsg.Photo[len(sentMsg.Photo)-1].FileID
-		b.cache[key] = CachedMedia{ID: fileID, Type: "photo"}
-		return b.cache[key], nil
+		cm := CachedMedia{ID: fileID, Type: "photo"}
+		b.cache.Set(key, cm)
+		return cm, nil
 	default:
-		return res, fmt.Errorf("unexpected file format %s", ext)
+		return res, fmt.Errorf("unexpected file format %s", contentType)
 	}
 
 }

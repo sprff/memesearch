@@ -4,7 +4,6 @@ import (
 	"api-client/pkg/models"
 	"fmt"
 	"log/slog"
-	"path"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -32,11 +31,10 @@ func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 
 func prepareMeme(meme models.Meme, r RequestContext) (any, error) {
 	ctx := r.Ctx
-	media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
-	if err != nil {
-		return nil, fmt.Errorf("can't get media: %w", err)
-	}
-	cm, err := r.Bot.GetFileID(string(meme.ID), path.Ext(meme.Filename), media.Body)
+	cm, err := r.Bot.GetFileID(string(meme.ID), func() ([]byte, error) {
+		media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
+		return media.Body, err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("can't get file id: %w", err)
 	}

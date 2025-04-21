@@ -8,3 +8,4 @@
 */locallogs
 **/*.gen.*
 **/__debug_bin*
+tg-client/data

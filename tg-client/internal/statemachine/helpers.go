@@ -13,6 +13,7 @@ func doLogin(r RequestContext, login, password string) error {
 	if err != nil {
 		return fmt.Errorf("can't login: %w", err)
 	}
+	r.UserInfo.Token = token
 	r.ApiClient.SetToken(token)
 	err = doWhoami(r)
 	if err != nil {
@@ -40,7 +41,7 @@ func doWhoami(r RequestContext) error {
 func doGetBoard(r RequestContext) error {
 	ctx := r.Ctx
 
-	id := models.BoardID(r.UserInfo.activeBoard)
+	id := models.BoardID(r.UserInfo.ActiveBoard)
 	b, err := r.ApiClient.GetBoardByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("can't get board by id: %w", err)
@@ -55,7 +56,7 @@ func doGetBoard(r RequestContext) error {
 }
 
 func doSetBoard(r RequestContext, id models.BoardID) error {
-	r.UserInfo.activeBoard = id
+	r.UserInfo.ActiveBoard = id
 
 	err := doGetBoard(r)
 	if err != nil {

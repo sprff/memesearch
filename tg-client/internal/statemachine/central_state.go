@@ -2,10 +2,8 @@ package statemachine
 
 import (
 	"api-client/pkg/models"
-	"errors"
 	"fmt"
 	"log/slog"
-	"path"
 	"strings"
 	"tg-client/internal/telegram"
 )
@@ -45,8 +43,8 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 			return s, nil
 		}
 	case isSearchRequest(r):
-		doSearchRequest(r)
-		return &CentralState{}, nil
+		err := doSearchRequest(r)
+		return &CentralState{}, err
 	case isAddPhoto(r), isAddVideo(r):
 		err := doAddMedia(r)
 		return &CentralState{}, err
@@ -89,7 +87,10 @@ func doSearchRequest(r RequestContext) error {
 	memes, err := r.ApiClient.SearchMemes(ctx, 1, 10, text)
 	if err != nil {
 		return fmt.Errorf("can't do search request: %w", err)
+	}
 
+	if len(memes) == 0 {
+		return models.ErrMemeNotFound
 	}
 	sendMemes(memes, r)
 	return nil
@@ -101,22 +102,10 @@ func sendMemes(memes []models.ScoredMeme, r RequestContext) {
 	for _, m := range memes {
 		meme := m.Meme
 		caption := fmt.Sprintf("ID:%s\nScore:%v\nBoard:%s\nDesc:%s", meme.ID, m.Score, meme.BoardID, meme.Descriptions)
-		media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
-		if err != nil {
-			switch {
-			case errors.Is(err, models.ErrMediaNotFound):
-				r.SendMessage("Meme don't have media")
-				slog.WarnContext(ctx, "Meme don't have media",
-					"meme_id", meme.ID)
-			default:
-				r.SendMessage("Unexpected error")
-				slog.ErrorContext(ctx, "Can't get media",
-					"error", err.Error(),
-					"meme_id", meme.ID)
-			}
-			continue
-		}
-		fileID, err := r.Bot.GetFileID(string(meme.ID), path.Ext(meme.Filename), media.Body)
+		fileID, err := r.Bot.GetFileID(string(meme.ID), func() ([]byte, error) {
+			media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
+			return media.Body, err
+		})
 		if err != nil {
 			r.SendMessage("Unexpected error")
 			slog.ErrorContext(ctx, "Can't get media",
@@ -124,7 +113,7 @@ func sendMemes(memes []models.ScoredMeme, r RequestContext) {
 				"meme_id", meme.ID)
 			continue
 		}
-		mges = append(mges, telegram.MediaGroupEntry{ID: fileID.ID, Filename: meme.Filename, Caption: caption, Body: media.Body})
+		mges = append(mges, telegram.MediaGroupEntry{ID: fileID.ID, Filename: meme.Filename, Caption: caption})
 	}
 	r.SendMediaGroup(mges)
 }
@@ -170,7 +159,7 @@ func doAddMedia(r RequestContext) error {
 
 	}
 
-	meme, err := r.ApiClient.PostMeme(ctx, r.UserInfo.activeBoard, filename, map[string]string{"general": msg.Caption})
+	meme, err := r.ApiClient.PostMeme(ctx, r.UserInfo.ActiveBoard, filename, map[string]string{"general": msg.Caption})
 	if err != nil {
 		return fmt.Errorf("can't create meme: %w", err)
 	}

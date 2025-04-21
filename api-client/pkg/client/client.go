@@ -70,6 +70,11 @@ func (c Client) About(ctx context.Context) (info map[string]any, err error) {
 	}
 }
 
+func (c Client) WithToken(token string) Client {
+	c.token = token
+	return c
+}
+
 // AuthLogin implements ClientInterface.
 func (c Client) AuthLogin(ctx context.Context, login string, password string) (token string, err error) {
 	resp, err := c.api.AuthLoginWithResponse(ctx, apiclient.AuthLoginJSONRequestBody{Login: login, Password: password}, c.middlewares()...)

@@ -5,31 +5,42 @@ import (
 	"api-client/pkg/models"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"strconv"
+	"tg-client/internal/kvstore"
 	"tg-client/internal/telegram"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type Statemachine struct {
-	states    map[int64]State     // per CHAT
-	userinfo  map[int64]*UserInfo // per USER
-	bot       *telegram.MSBot
-	clientUrl string
+	states   map[int64]State         // per CHAT
+	userinfo kvstore.Store[UserInfo] // per USER
+	bot      *telegram.MSBot
+	client   client.Client
 }
 
 type UserInfo struct {
-	client      *client.Client
-	activeBoard models.BoardID
+	ActiveBoard models.BoardID
+	Token       string
 }
 
-func New(bot *telegram.MSBot, clientUrl string) *Statemachine {
-	return &Statemachine{
-		states:    make(map[int64]State),
-		userinfo:  make(map[int64]*UserInfo),
-		bot:       bot,
-		clientUrl: clientUrl,
+func New(bot *telegram.MSBot, clientUrl string, datadir string) (*Statemachine, error) {
+	client, err := client.New(clientUrl)
+	if err != nil {
+		return nil, fmt.Errorf("can't create client: %w", err)
 	}
+	userinfo, err := kvstore.New[UserInfo](fmt.Sprintf("%s/userinfo.db", datadir))
+	if err != nil {
+		return nil, fmt.Errorf("can't create userinfo: %w", err)
+	}
+	return &Statemachine{
+		states:   make(map[int64]State),
+		userinfo: userinfo,
+		bot:      bot,
+		client:   client,
+	}, nil
 }
 
 func (s *Statemachine) Process() {
@@ -53,25 +64,22 @@ func (s *Statemachine) processUpdate(ctx context.Context, u tgbotapi.Update) {
 	if user == nil {
 		return
 	}
-	if _, ok := s.userinfo[user.ID]; !ok {
-		c, err := client.New(s.clientUrl)
-		if err != nil {
-			slog.ErrorContext(ctx, "Can't create client", "err", err)
-			return
-		}
-		s.userinfo[user.ID] = &UserInfo{client: &c, activeBoard: "default"}
+	id := strconv.FormatInt(user.ID, 10)
+	if _, ok := s.userinfo.Get(id); !ok {
+		s.userinfo.Set(id, UserInfo{ActiveBoard: "default"})
 	}
-
+	info, _ := s.userinfo.Get(id)
+	c := s.client.WithToken(info.Token)
 	r := RequestContext{
 		Ctx:       ctx,
 		Bot:       s.bot,
 		Event:     &u,
-		ApiClient: s.userinfo[user.ID].client,
-		UserInfo:  s.userinfo[user.ID],
+		ApiClient: &c,
+		UserInfo:  &info,
 	}
-	if user := u.SentFrom(); user != nil {
-
-	}
+	defer func(i *UserInfo) {
+		s.userinfo.Set(id, *i)
+	}(&info)
 
 	if chat := u.FromChat(); chat != nil {
 		if _, ok := s.states[chat.ID]; !ok {
@@ -88,12 +96,10 @@ func (s *Statemachine) processUpdate(ctx context.Context, u tgbotapi.Update) {
 			sendError(r, err)
 			return
 		}
-
 		s.states[chat.ID] = nw
 	}
 	if q := u.InlineQuery; q != nil {
 		processInline(q, r)
-
 	}
 }
 
