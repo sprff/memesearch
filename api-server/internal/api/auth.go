@@ -84,7 +84,7 @@ func (a *api) generateToken(u models.User) (string, error) {
 	claims := Claims{
 		UserID: u.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(31 * 24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 		},
@@ -130,5 +130,8 @@ func (a *api) Authorize(ctx context.Context, token string) (context.Context, err
 
 func GetUserID(ctx context.Context) models.UserID {
 	s, _ := ctx.Value(contextKey("user_id")).(models.UserID)
+	if s == "" {
+		return "guest"
+	}
 	return s
 }

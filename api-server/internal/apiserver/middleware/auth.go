@@ -14,7 +14,7 @@ import (
 func Auth(a *api.API) func(f strictnethttp.StrictHTTPHandlerFunc, operationID string) strictnethttp.StrictHTTPHandlerFunc {
 	return func(f strictnethttp.StrictHTTPHandlerFunc, operationID string) strictnethttp.StrictHTTPHandlerFunc {
 		return func(_ context.Context, w http.ResponseWriter, r *http.Request, request any) (response any, err error) {
-			if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
+			if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") && operationID != "AuthLogin" {
 				token := auth[7:]
 
 				ctx, err := a.Authorize(r.Context(), token)
