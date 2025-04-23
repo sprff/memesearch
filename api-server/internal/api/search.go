@@ -12,6 +12,28 @@ func (a *api) Search(ctx context.Context, req map[string]string, offset, limit i
 	logger := slog.Default().With("from", "api.SearchMemeByBoardID")
 	logger.InfoContext(ctx, "Started")
 
+	isEmpty := true
+	if len(req) > 0 {
+		for _, v := range req {
+			if len(v) != 0 {
+				isEmpty = false
+				break
+			}
+		}
+	}
+
+	if isEmpty {
+		memes, err := a.ListMemes(ctx, offset, limit, "id")
+		if err != nil {
+			return nil, fmt.Errorf("can't list memes: %w", err)
+		}
+		smemes := make([]searchranker.ScroredMeme, 0, len(memes))
+		for _, m := range memes {
+			smemes = append(smemes, searchranker.ScroredMeme{Score: 0, Meme: m})
+		}
+		return smemes, nil
+	}
+
 	batchSize := 200
 	memes := []models.Meme{}
 	listOffset := 0
@@ -26,6 +48,7 @@ func (a *api) Search(ctx context.Context, req map[string]string, offset, limit i
 		listOffset += batchSize
 		memes = append(memes, nmemes...)
 	}
+
 	res, err := a.ranker.Rank(memes, req)
 	begin := min(offset, len(res))
 	end := min(offset+limit, len(res))

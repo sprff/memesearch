@@ -174,8 +174,5 @@ func (a *API) Authorize(ctx context.Context, token string) (context.Context, err
 }
 
 func (a *API) Search(ctx context.Context, req map[string]string, offset, limit int) ([]searchranker.ScroredMeme, error) {
-	if len(req) == 0 {
-		return nil, ErrInvalid{"reqest", "request shouldn't be empty"}
-	}
 	return a.api.Search(ctx, req, offset, limit)
 }
