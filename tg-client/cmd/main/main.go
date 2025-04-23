@@ -12,6 +12,8 @@ import (
 )
 
 func main() {
+
+	url := os.Getenv("API_SERVER")
 	logFolder := os.Getenv("LOG_FOLDER")
 	date := time.Now().Format("2006-01-02")
 	handler, err := contextlogger.NewContextHandler(fmt.Sprintf("%s/%s.log", logFolder, date), &slog.HandlerOptions{Level: slog.LevelDebug})
@@ -25,7 +27,7 @@ func main() {
 		log.Fatalf("Failed to create bot: %v", err)
 	}
 
-	state, err := statemachine.New(bot, "http://localhost:1781", os.Getenv("MS_DATA_FOLDER"))
+	state, err := statemachine.New(bot, url, os.Getenv("MS_DATA_FOLDER"))
 	if err != nil {
 		log.Fatalf("Failed to create statemachine: %v", err)
 	}

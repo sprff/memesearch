@@ -7,6 +7,7 @@ services:
       - "1781:1781"
     depends_on:
       - apiserver-database
+    hostname: apiserver
     environment:
       LOG_FOLDER: logs/
       MS_API_CONFIG_PATH: /app/config/test/config.yml #TODO как то прокинуть тест/прод
@@ -33,6 +34,20 @@ services:
         POSTGRES_DB: ${MS_APISERVER_DB_NAME}
     volumes:
       - db:/var/lib/postgresql/data
+
+
+  tgclient-backend:
+    build:
+      context: ./
+      dockerfile: tg-client/Dockerfile
+    environment:
+      MS_TGCLIENT_BOT_TOKEN: ${MS_TGCLIENT_BOT_TOKEN}
+      MS_DATA_FOLDER: "./data"
+      LOG_FOLDER: "logs/"
+      API_SERVER: "http://apiserver:1781"
+    volumes:
+      - ./tg-client/logs:/app/logs
+      - ./tg-client/data:/app/data
 
 
 volumes:
