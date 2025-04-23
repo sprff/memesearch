@@ -79,7 +79,7 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 			return s, err
 		case "/search":
 			text := strings.Join(args[:], " ")
-			mv := MediaViewState{page: 1, getMedias: func(ctx context.Context, page, pageSize int) ([]models.ScoredMeme, error) {
+			mv := MediaViewState{page: 1, skip: true, getMedias: func(ctx context.Context, page, pageSize int) ([]models.ScoredMeme, error) {
 				return r.ApiClient.SearchMemes(ctx, page, pageSize, text)
 			}}
 			return mv.Process(r)

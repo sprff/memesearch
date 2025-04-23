@@ -130,6 +130,5 @@ func (a *api) Authorize(ctx context.Context, token string) (context.Context, err
 
 func GetUserID(ctx context.Context) models.UserID {
 	s, _ := ctx.Value(contextKey("user_id")).(models.UserID)
-	
 	return s
 }
