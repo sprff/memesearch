@@ -14,7 +14,7 @@ var _ State = &CentralState{}
 type CentralState struct {
 }
 
-var ErrBadCommandUsage = errors.New("Wrong command usage. Please use help")
+var ErrBadCommandUsage = errors.New("Wrong command usage. Please use /help")
 
 func (s *CentralState) Process(r RequestContext) (State, error) {
 	switch {
@@ -29,18 +29,21 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 			}
 			err := doRegister(r, args[0], args[1])
 			return s, err
-		case "/search":
-			text := strings.Join(args[:], " ")
-			mv := MediaViewState{page: 1, getMedias: func(ctx context.Context, page, pageSize int) ([]models.ScoredMeme, error) {
-				return r.ApiClient.SearchMemes(ctx, page, pageSize, text)
-			}}
-			return mv.Process(r)
+
+		case "/help":
+			r.SendMessage(help())
+			return s, nil
 		case "/login":
 			if len(args) < 2 {
 				return s, ErrBadCommandUsage
 			}
 			err := doLogin(r, args[0], args[1])
 			return s, err
+		case "/logout":
+			r.UserInfo.Token = ""
+			r.UserInfo.ActiveBoard = "default"
+			r.SendMessage("Logged out")
+			return s, nil
 		case "/whoami":
 			err := doWhoami(r)
 			return s, err
@@ -52,6 +55,15 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 			return s, err
 		case "/getboard":
 			err := doGetBoard(r)
+			return s, err
+		case "/createboard":
+			if len(args) < 1 {
+				return s, ErrBadCommandUsage
+			}
+			err := doCreateBoard(r, args[0])
+			return s, err
+		case "/listboards":
+			err := doListBoards(r)
 			return s, err
 		case "/subscribe":
 			if len(args) < 1 {
@@ -65,14 +77,21 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 			}
 			err := doUnsubscribe(r, models.BoardID(args[0]))
 			return s, err
+		case "/search":
+			text := strings.Join(args[:], " ")
+			mv := MediaViewState{page: 1, getMedias: func(ctx context.Context, page, pageSize int) ([]models.ScoredMeme, error) {
+				return r.ApiClient.SearchMemes(ctx, page, pageSize, text)
+			}}
+			return mv.Process(r)
 		default:
-			r.SendMessage("Unknown command, please use help")
+			r.SendMessage("Unknown command, please use /help")
 			return s, nil
 		}
 	case isAddPhoto(r), isAddVideo(r):
 		err := doAddMedia(r)
 		return &CentralState{}, err
 	default:
+		r.SendMessage("Please use /help to see what i can do.")
 		return &CentralState{}, nil
 	}
 }

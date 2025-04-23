@@ -80,7 +80,8 @@ func prepareMeme(meme models.Meme, r RequestContext, flags string) (any, error) 
 		if !videos {
 			return nil, ErrSkipped
 		}
-		video := tgbotapi.NewInlineQueryResultCachedVideo(string(meme.ID), cm.ID, "Title")
+		video := tgbotapi.NewInlineQueryResultCachedVideo(string(meme.ID), cm.ID, " ")
+		video.Description = meme.Descriptions["general"]
 		return video, nil
 	default:
 		return nil, fmt.Errorf("unexpected cm.Type: %s", cm.Type)

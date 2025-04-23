@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 )
 
 func doRegister(r RequestContext, login, password string) error {
@@ -70,13 +71,48 @@ func doGetBoard(r RequestContext) error {
 }
 
 func doSetBoard(r RequestContext, id models.BoardID) error {
+	prev := r.UserInfo.ActiveBoard
 	r.UserInfo.ActiveBoard = id
 
 	err := doGetBoard(r)
 	if err != nil {
+		r.UserInfo.ActiveBoard = prev
 		return fmt.Errorf("can't doGetBoard: %w", err)
 	}
 	return nil
+}
+
+func doCreateBoard(r RequestContext, name string) error {
+	ctx := r.Ctx
+	b, err := r.ApiClient.PostBoard(ctx, name)
+	if err != nil {
+		return fmt.Errorf("can't post board: %w", err)
+	}
+
+	msg := fmt.Sprintf("New board: %s (<code>%s</code>)", b.Name, b.ID)
+	_, err = r.SendMessage(msg)
+	if err != nil {
+		return fmt.Errorf("can't send message: %w", err)
+	}
+	return nil
+}
+func doListBoards(r RequestContext) error {
+	ctx := r.Ctx
+	boards, err := r.ApiClient.ListBoards(ctx, 1, 100, "id")
+	if err != nil {
+		return fmt.Errorf("can't list boards: %w", err)
+	}
+
+	msg := strings.Builder{}
+	for i, b := range boards {
+		msg.WriteString(fmt.Sprintf("%d. %s (<code>%s</code>)\n", i+1, b.Name, b.ID))
+	}
+	_, err = r.SendMessage(msg.String())
+	if err != nil {
+		return fmt.Errorf("can't send message: %w", err)
+	}
+	return nil
+
 }
 
 func doSubscribe(r RequestContext, id models.BoardID) error {
@@ -142,4 +178,25 @@ func unwrap(e error) error {
 		e = ne.Unwrap()
 	}
 	return e
+}
+
+func help() string {
+	return `MemeSearch - бот для поиска мемов по описанию
+1) Поиск: осуществляется командой /search query либо inline запросом @test_ms_sprff_bot query. В силу ограничений телеграма для инлайн запроса доплнительно поддерживатеся поиск только видео при запросе v!query или только фото при запросе p!query.
+2) Бот учитывает аккаунт(сервиса MemeSearch, не телегерама) с которого приходят запросы и использует мемы доступные этому аккаунту. По умолчанию запросы отправляются гостевого аккаунта
+3) Команды для работы с аккаунтом:
+	/register login password - регистраиция
+	/login login password - авторизация
+	/whoami - узнать что за аккаунт сейчас активен
+/logout - выйти из аккаунта
+4) Сервис поддерживает концепцию досок мемов:
+	/getboard - узнать текущую активную доску
+	/setboard id - указать новую активную доску
+	/createboard name - Создать доску с именем name
+	/listboards - Перечислить доступные доски
+	/subscibe id - Подписаться на доску id чтобы иметь доступ к ее мемам
+	/unsubscribe id - Отписаться от доски id
+5) Для того чтобы создать мем, пришлите фото/виде с описанием. Данный мем будет создан на текущую активную доску
+
+`
 }

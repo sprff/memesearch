@@ -25,11 +25,15 @@ func (m *MediaViewState) Process(r RequestContext) (State, error) {
 		cmd := r.Event.Message.Text
 		if cmd == "/next" {
 			m.page += 1
-		}
-		if cmd == "/exit" {
+		} else if cmd == "/exit" {
+			r.SendMessage("Exited media view.")
 			return &CentralState{}, nil
+		} else {
+			r.SendMessage("Use /next to see next results or /exit to exit media view.")
+			return m, nil
 		}
 	}
+
 	m.skip = false
 	memes, err := m.getMedias(r.Ctx, m.page, 10)
 	if err != nil {
