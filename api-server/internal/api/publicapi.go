@@ -22,6 +22,9 @@ func New(s storage.Storage, secrets config.SecretConfig, ranker searchranker.Ran
 }
 
 func (a *API) CreateBoard(ctx context.Context, name string) (models.Board, error) {
+	if GetUserID(ctx) == "" {
+		return models.Board{}, ErrUnauthorized
+	}
 	return a.api.CreateBoard(ctx, name)
 }
 
@@ -54,6 +57,9 @@ func (a *API) DeleteBoard(ctx context.Context, id models.BoardID) (models.Board,
 }
 
 func (a *API) ListBoards(ctx context.Context, offset, limit int, sortBy string) ([]models.Board, error) {
+	if GetUserID(ctx) == "" {
+		return nil, ErrUnauthorized
+	}
 	return a.api.ListBoards(ctx, offset, limit, sortBy)
 }
 
@@ -110,7 +116,6 @@ func (a *API) DeleteMeme(ctx context.Context, id models.MemeID) error {
 }
 
 func (a *API) ListMemes(ctx context.Context, offset, limit int, sortBy string) ([]models.Meme, error) {
-
 	return a.api.ListMemes(ctx, offset, limit, sortBy)
 }
 

@@ -89,7 +89,7 @@ func (a *api) DeleteMeme(ctx context.Context, id models.MemeID) error {
 func (a *api) ListMemes(ctx context.Context, offset, limit int, sortBy string) ([]models.Meme, error) {
 	userID := GetUserID(ctx)
 	if userID == "" {
-		return nil, ErrUnauthorized
+		userID = "guest"
 	}
 
 	memes, err := a.storage.ListMemes(ctx, userID, offset, limit, sortBy)

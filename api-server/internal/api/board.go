@@ -12,6 +12,7 @@ func (a *api) CreateBoard(ctx context.Context, name string) (models.Board, error
 	if err != nil {
 		return models.Board{}, fmt.Errorf("can't create board: %w", err)
 	}
+
 	return board, nil
 }
 

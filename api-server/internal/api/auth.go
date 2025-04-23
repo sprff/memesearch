@@ -63,7 +63,7 @@ func (a *api) AuthWhoami(ctx context.Context) (models.User, error) {
 		if err == models.ErrUserNotFound {
 			return models.User{}, ErrForbidden
 		}
-		return models.User{}, fmt.Errorf("can't login: %w", err)
+		return models.User{}, fmt.Errorf("can't whoami: %w", err)
 	}
 
 	return user, nil
@@ -130,8 +130,6 @@ func (a *api) Authorize(ctx context.Context, token string) (context.Context, err
 
 func GetUserID(ctx context.Context) models.UserID {
 	s, _ := ctx.Value(contextKey("user_id")).(models.UserID)
-	if s == "" {
-		return "guest"
-	}
+	
 	return s
 }

@@ -89,7 +89,11 @@ func (b *BoardStore) DeleteBoard(ctx context.Context, id models.BoardID) error {
 // ListBoards implements models.BoardRepo.
 func (b *BoardStore) ListBoards(ctx context.Context, userID models.UserID, offset int, limit int, sortBy string) ([]models.Board, error) {
 	var boards []models.Board
-	err := b.db.SelectContext(ctx, &boards, "SELECT * FROM boards WHERE id IN (SELECT board_id FROM subscriptions WHERE user_id=$1)  OFFSET $2 LIMIT $3", userID, offset, limit)
+	err := b.db.SelectContext(ctx, &boards, `SELECT * FROM boards WHERE id IN (
+	SELECT board_id AS id FROM subscriptions WHERE user_id=$1
+	UNION
+	SELECT id FROM boards WHERE owner_id=$1
+	)  OFFSET $2 LIMIT $3`, userID, offset, limit)
 	if err != nil {
 		return nil, fmt.Errorf("can't select: %w", err)
 
