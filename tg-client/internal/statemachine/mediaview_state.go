@@ -66,12 +66,15 @@ func prepareMemeMediaGroup(r RequestContext, m models.ScoredMeme) (telegram.Medi
 
 	meme := m.Meme
 	caption := fmt.Sprintf("ID:%s\nScore:%v\nBoard:%s\nDesc:%s", meme.ID, m.Score, meme.BoardID, meme.Descriptions)
-	cm, err := r.Bot.GetCachedMedia(string(meme.ID), func() ([]byte, error) {
+	cm, err := r.Bot.Upload(ctx, string(meme.ID), false, func() (telegram.UploadEntry, error) {
 		media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
-		return media.Body, err
+		if err != nil {
+			return telegram.UploadEntry{}, fmt.Errorf("can't get media: %w", err)
+		}
+		return telegram.UploadEntry{Name: "file", Body: &media.Body}, nil
 	})
 	if err != nil {
 		return telegram.MediaGroupEntry{}, fmt.Errorf("can't get media: %v", err)
 	}
-	return telegram.MediaGroupEntry{ID: cm.ID, Filename: meme.Filename, Caption: caption, MIMEType: cm.Type}, nil
+	return telegram.MediaGroupEntry{Media: cm, Caption: caption}, nil
 }

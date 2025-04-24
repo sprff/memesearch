@@ -138,7 +138,7 @@ func isAddVideo(r RequestContext) bool {
 func doAddMedia(r RequestContext) error {
 	ctx := r.Ctx
 	msg := r.Event.Message
-	filename, media, err := r.Bot.GetFileBytes(msg)
+	filename, media, err := r.Bot.GetFile(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("can't get files: %w", err)
 

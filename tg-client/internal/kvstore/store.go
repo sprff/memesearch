@@ -1,9 +1,8 @@
 package kvstore
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -26,8 +25,8 @@ func New[T any](path string) (Store[T], error) {
 
 	query := `
     CREATE TABLE IF NOT EXISTS storage (
-        id TEXT,
-        value BYTEA
+        id TEXT PRIMARY KEY,
+        value TEXT
 	)`
 
 	_, err = db.Exec(query)
@@ -42,7 +41,7 @@ func New[T any](path string) (Store[T], error) {
 }
 
 func (s *Store[T]) Get(key string) (res T, ok bool) {
-	var b []byte
+	var b string
 	err := s.db.Get(&b, "SELECT value FROM storage WHERE id=$1", key)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -51,7 +50,7 @@ func (s *Store[T]) Get(key string) (res T, ok bool) {
 		panic(fmt.Sprintf("can't select: %v", err))
 	}
 
-	err = gob.NewDecoder(bytes.NewBuffer(b)).Decode(&res)
+	err = json.Unmarshal([]byte(b), &res)
 	if err != nil {
 		panic(fmt.Sprintf("can't decode: %v", err))
 	}
@@ -59,17 +58,16 @@ func (s *Store[T]) Get(key string) (res T, ok bool) {
 }
 
 func (s *Store[T]) Set(key string, value T) error {
-	enc := bytes.NewBuffer([]byte{})
-	err := gob.NewEncoder(enc).Encode(value)
+	b, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Sprintf("can't encode: %v", err))
 	}
 
 	_, ok := s.Get(key)
 	if ok {
-		_, err = s.db.Exec("UPDATE storage SET value=? WHERE id=?", enc.Bytes(), key)
+		_, err = s.db.Exec("UPDATE storage SET value=? WHERE id=?", string(b), key)
 	} else {
-		_, err = s.db.Exec("INSERT INTO storage (id, value) VALUES (?, ?)", key, enc.Bytes())
+		_, err = s.db.Exec("INSERT INTO storage (id, value) VALUES (?, ?)", key, string(b))
 	}
 	if err != nil {
 		return fmt.Errorf("can't exec: %w", err)

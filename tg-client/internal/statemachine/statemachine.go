@@ -45,7 +45,7 @@ func New(bot *telegram.MSBot, clientUrl string, datadir string) (*Statemachine, 
 }
 
 func (s *Statemachine) Process() {
-	updates := s.bot.UpdateChan()
+	updates := s.bot.GetUpdatesChan()
 	for update := range updates {
 		ctx := context.Background() //with update id
 		s.processUpdate(ctx, update)

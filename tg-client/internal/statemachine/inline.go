@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"tg-client/internal/telegram"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -62,9 +63,12 @@ func prepareMeme(meme models.Meme, r RequestContext, flags string) (any, error) 
 	photos := strings.Contains(flags, "p")
 	videos := strings.Contains(flags, "v")
 
-	cm, err := r.Bot.GetCachedMedia(string(meme.ID), func() ([]byte, error) {
+	cm, err := r.Bot.Upload(ctx, string(meme.ID), false, func() (telegram.UploadEntry, error) {
 		media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
-		return media.Body, err
+		if err != nil {
+			return telegram.UploadEntry{}, fmt.Errorf("can't get media: %w", err)
+		}
+		return telegram.UploadEntry{Name: "file", Body: &media.Body}, nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("can't get file id: %w", err)
@@ -74,13 +78,13 @@ func prepareMeme(meme models.Meme, r RequestContext, flags string) (any, error) 
 		if !photos {
 			return nil, ErrSkipped
 		}
-		photo := tgbotapi.NewInlineQueryResultCachedPhoto(string(meme.ID), cm.ID)
+		photo := tgbotapi.NewInlineQueryResultCachedPhoto(string(meme.ID), cm.FileID)
 		return photo, nil
 	case "video":
 		if !videos {
 			return nil, ErrSkipped
 		}
-		video := tgbotapi.NewInlineQueryResultCachedVideo(string(meme.ID), cm.ID, " ")
+		video := tgbotapi.NewInlineQueryResultCachedVideo(string(meme.ID), cm.FileID, " ")
 		video.Description = meme.Descriptions["general"]
 		return video, nil
 	default:

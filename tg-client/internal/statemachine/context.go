@@ -25,13 +25,12 @@ func (r RequestContext) MustChat() int64 {
 }
 
 func (r RequestContext) SendMessage(text string) (int, error) {
-	return r.Bot.SendMessage(r.Ctx, r.MustChat(), text)
+	return r.Bot.SendMessage(r.Ctx, r.MustChat(), text, nil, nil, nil)
 }
 
 func (r RequestContext) SendMessageReply(text string, replyTo int) (int, error) {
-	return r.Bot.SendMessageReply(r.Ctx, r.MustChat(), text, replyTo)
+	return r.Bot.SendMessage(r.Ctx, r.MustChat(), text, nil, &replyTo, nil)
 }
-
 
 func (r RequestContext) SendMediaGroup(medias []telegram.MediaGroupEntry) {
 	r.Bot.SendMediaGroup(r.Ctx, r.MustChat(), medias)
