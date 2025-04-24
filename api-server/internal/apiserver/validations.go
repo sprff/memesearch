@@ -36,9 +36,9 @@ func (r UpdateMemeByIDRequestObject) GetParams() (
 }
 
 const (
-	DefaultPageSize = 20
-	DefaultPage     = 1
-	DefaultSortBy   = "id"
+	DefaultOffset = 0
+	DefaultLimit  = 20
+	DefaultSortBy = "id"
 )
 
 var (
@@ -46,23 +46,23 @@ var (
 )
 
 func (r SearchMemesRequestObject) GetParams() (
-	page, pageSize int, dsc map[string]string, err error) {
-	page = DefaultPage
-	pageSize = DefaultPageSize
+	offset, limit int, dsc map[string]string, err error) {
+	offset = DefaultOffset
+	limit = DefaultLimit
 
-	if r.Params.Page != nil {
-		page = *r.Params.Page
+	if r.Params.Offset != nil {
+		offset = *r.Params.Offset
 	}
-	if page < 1 {
-		err = invalidInput("page", "must be page>=1")
+	if offset < 0 {
+		err = invalidInput("offset", "must be offset>=0")
 		return
 	}
 
-	if r.Params.PageSize != nil {
-		pageSize = *r.Params.PageSize
+	if r.Params.Limit != nil {
+		limit = *r.Params.Limit
 	}
-	if pageSize < 1 || pageSize > 100 {
-		err = invalidInput("pageSize", "must be 1 <= pageSize <= 100")
+	if limit < 1 || limit > 100 {
+		err = invalidInput("limit", "must be 1 <= limit <= 100")
 		return
 	}
 
@@ -71,24 +71,24 @@ func (r SearchMemesRequestObject) GetParams() (
 }
 
 func (r ListMemesRequestObject) GetParams() (
-	page, pageSize int, sortBy string, err error) {
-	page = DefaultPage
-	pageSize = DefaultPageSize
+	offset, limit int, sortBy string, err error) {
+	offset = DefaultOffset
+	limit = DefaultLimit
 	sortBy = DefaultSortBy
 
-	if r.Params.Page != nil {
-		page = *r.Params.Page
+	if r.Params.Offset != nil {
+		offset = *r.Params.Offset
 	}
-	if page < 1 {
-		err = invalidInput("page", "must be page>=1")
+	if offset < 0 {
+		err = invalidInput("offset", "must be offset>=0")
 		return
 	}
 
-	if r.Params.PageSize != nil {
-		pageSize = *r.Params.PageSize
+	if r.Params.Limit != nil {
+		limit = *r.Params.Limit
 	}
-	if pageSize < 1 || pageSize > 100 {
-		err = invalidInput("pageSize", "must be 1 <= pageSize <= 100")
+	if limit < 1 || limit > 100 {
+		err = invalidInput("limit", "must be 1 <= limit <= 100")
 		return
 	}
 
@@ -201,24 +201,24 @@ func (r UpdateBoardByIDRequestObject) GetParams() (
 	return
 }
 func (r ListBoardsRequestObject) GetParams() (
-	page, pageSize int, sortBy string, err error) {
-	page = DefaultPage
-	pageSize = DefaultPageSize
+	offset, limit int, sortBy string, err error) {
+	offset = DefaultOffset
+	limit = DefaultLimit
 	sortBy = DefaultSortBy
 
-	if r.Params.Page != nil {
-		page = *r.Params.Page
+	if r.Params.Offset != nil {
+		offset = *r.Params.Offset
 	}
-	if page < 1 {
-		err = invalidInput("page", "must be page>=1")
+	if offset < 0 {
+		err = invalidInput("offset", "must be offset>=0")
 		return
 	}
 
-	if r.Params.PageSize != nil {
-		pageSize = *r.Params.PageSize
+	if r.Params.Limit != nil {
+		limit = *r.Params.Limit
 	}
-	if pageSize < 1 || pageSize > 100 {
-		err = invalidInput("pageSize", "must be 1 <= pageSize <= 100")
+	if limit < 1 || limit > 100 {
+		err = invalidInput("limit", "must be 1 <= limit <= 100")
 		return
 	}
 

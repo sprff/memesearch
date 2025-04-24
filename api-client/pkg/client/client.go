@@ -20,19 +20,19 @@ type ClientInterface interface {
 	AuthRegister(ctx context.Context, login, password string) (id models.UserID, err error)
 	AuthLogin(ctx context.Context, login, password string) (token string, err error)
 	AuthWhoami(ctx context.Context) (user models.User, err error)
-	ListBoards(ctx context.Context, page, pageSize int, sortBy string) (boards []models.Board, err error)
+	ListBoards(ctx context.Context, offset, limit int, sortBy string) (boards []models.Board, err error)
 	PostBoard(ctx context.Context, name string) (board models.Board, err error)
 	DeleteBoardByID(ctx context.Context, boardID models.BoardID) (board models.Board, err error)
 	GetBoardByID(ctx context.Context, boardID models.BoardID) (board models.Board, err error)
 	UpdateBoardByID(ctx context.Context, boardID models.BoardID, name *string, owner *models.UserID) (board models.Board, err error)
 	GetMediaByID(ctx context.Context, mediaID models.MediaID) (media models.Media, err error)
 	PutMediaByID(ctx context.Context, media models.Media, filename string) (err error)
-	ListMemes(ctx context.Context, page, pageSize int, sortBy string) (boards []models.Meme, err error)
+	ListMemes(ctx context.Context, offset, limit int, sortBy string) (boards []models.Meme, err error)
 	PostMeme(ctx context.Context, boardID models.BoardID, filename string, dsc map[string]string) (meme models.Meme, err error)
 	DeleteMemeByID(ctx context.Context, memeID models.MemeID) (meme models.Meme, err error)
 	GetMemeByID(ctx context.Context, memeID models.MemeID) (meme models.Meme, err error)
 	UpdateMemeByID(ctx context.Context, memeID models.MemeID, boardID *models.BoardID, filename *string, dsc *map[string]string) (meme models.Meme, err error)
-	SearchMemes(ctx context.Context, page, pageSize int, general string) (memes []models.ScoredMeme, err error)
+	SearchMemes(ctx context.Context, offset, limit int, general string) (memes []models.ScoredMeme, err error)
 	SubscribeByBoardID(ctx context.Context, boardID models.BoardID) (err error)
 	UnsubscribeByBoardID(ctx context.Context, boardID models.BoardID) (err error)
 	GetUserByID(ctx context.Context, userID models.UserID) (user models.User, err error)
@@ -315,8 +315,8 @@ func (c Client) GetUserByID(ctx context.Context, userID models.UserID) (user mod
 }
 
 // ListBoards implements ClientInterface.
-func (c Client) ListBoards(ctx context.Context, page int, pageSize int, sortBy string) (boards []models.Board, err error) {
-	req := &apiclient.ListBoardsParams{Page: &page, PageSize: &pageSize, SortBy: (*apiclient.ListBoardsParamsSortBy)(&sortBy)}
+func (c Client) ListBoards(ctx context.Context, offset int, limit int, sortBy string) (boards []models.Board, err error) {
+	req := &apiclient.ListBoardsParams{Offset: &offset, Limit: &limit, SortBy: (*apiclient.ListBoardsParamsSortBy)(&sortBy)}
 	resp, err := c.api.ListBoardsWithResponse(ctx, req, c.middlewares()...)
 	if err != nil {
 		err = fmt.Errorf("can't request: %w", err)
@@ -342,8 +342,8 @@ func (c Client) ListBoards(ctx context.Context, page int, pageSize int, sortBy s
 }
 
 // ListMemes implements ClientInterface.
-func (c Client) ListMemes(ctx context.Context, page int, pageSize int, sortBy string) (memes []models.Meme, err error) {
-	req := &apiclient.ListMemesParams{Page: &page, PageSize: &pageSize, SortBy: (*apiclient.ListMemesParamsSortBy)(&sortBy)}
+func (c Client) ListMemes(ctx context.Context, offset int, limit int, sortBy string) (memes []models.Meme, err error) {
+	req := &apiclient.ListMemesParams{Offset: &offset, Limit: &limit, SortBy: (*apiclient.ListMemesParamsSortBy)(&sortBy)}
 	resp, err := c.api.ListMemesWithResponse(ctx, req, c.middlewares()...)
 	if err != nil {
 		err = fmt.Errorf("can't request: %w", err)
@@ -449,8 +449,8 @@ func (c Client) PutMediaByID(ctx context.Context, media models.Media, filename s
 }
 
 // SearchByBoardID implements ClientInterface.
-func (c Client) SearchMemes(ctx context.Context, page int, pageSize int, general string) (memes []models.ScoredMeme, err error) {
-	req := &apiclient.SearchMemesParams{Page: &page, PageSize: &pageSize, General: &general}
+func (c Client) SearchMemes(ctx context.Context, offset int, limit int, general string) (memes []models.ScoredMeme, err error) {
+	req := &apiclient.SearchMemesParams{Offset: &offset, Limit: &limit, General: &general}
 	resp, err := c.api.SearchMemesWithResponse(ctx, req, c.middlewares()...)
 	if err != nil {
 		err = fmt.Errorf("can't request: %w", err)

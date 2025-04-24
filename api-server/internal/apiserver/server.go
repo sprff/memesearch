@@ -87,12 +87,12 @@ func (s ServerImpl) GetMemeByID(ctx context.Context, request GetMemeByIDRequestO
 
 // ListMemes implements StrictServerInterface.
 func (s ServerImpl) ListMemes(ctx context.Context, request ListMemesRequestObject) (ListMemesResponseObject, error) {
-	page, pageSize, sortBy, err := request.GetParams()
+	offset, limit, sortBy, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	memes, err := s.api.ListMemes(ctx, (page-1)*pageSize, pageSize, sortBy)
+	memes, err := s.api.ListMemes(ctx, offset, limit, sortBy)
 	if err != nil {
 		return nil, fmt.Errorf("can't list memes: %w", err)
 	}
@@ -207,12 +207,12 @@ func (s ServerImpl) UpdateMemeByID(ctx context.Context, request UpdateMemeByIDRe
 
 // SearchByBoardID implements StrictServerInterface.
 func (s ServerImpl) SearchMemes(ctx context.Context, request SearchMemesRequestObject) (SearchMemesResponseObject, error) {
-	page, pageSize, dsc, err := request.GetParams()
+	offset, limit, dsc, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	memes, err := s.api.Search(ctx, dsc, (page-1)*pageSize, pageSize)
+	memes, err := s.api.Search(ctx, dsc, offset, limit)
 	if err != nil {
 		return nil, fmt.Errorf("can't search: %w", err)
 	}
@@ -280,12 +280,12 @@ func (s ServerImpl) GetUserByID(ctx context.Context, request GetUserByIDRequestO
 
 // ListBoards implements StrictServerInterface.
 func (s ServerImpl) ListBoards(ctx context.Context, request ListBoardsRequestObject) (ListBoardsResponseObject, error) {
-	page, pageSize, sortBy, err := request.GetParams()
+	offset, limit, sortBy, err := request.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("can't get params: %w", err)
 	}
 
-	boards, err := s.api.ListBoards(ctx, (page-1)*pageSize, pageSize, sortBy)
+	boards, err := s.api.ListBoards(ctx, offset, limit, sortBy)
 	if err != nil {
 		return nil, fmt.Errorf("can't list boards: %w", err)
 	}

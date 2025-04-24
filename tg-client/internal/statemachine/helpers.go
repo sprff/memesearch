@@ -98,7 +98,7 @@ func doCreateBoard(r RequestContext, name string) error {
 }
 func doListBoards(r RequestContext) error {
 	ctx := r.Ctx
-	boards, err := r.ApiClient.ListBoards(ctx, 1, 100, "id")
+	boards, err := r.ApiClient.ListBoards(ctx, 0, 100, "id")
 	if err != nil {
 		return fmt.Errorf("can't list boards: %w", err)
 	}
