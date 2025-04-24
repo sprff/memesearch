@@ -20,7 +20,7 @@ import (
 type MSBot struct {
 	bot        *tgbotapi.BotAPI
 	cache      CachedMediaStorage
-	uploadChan chan UploadEntry
+	uploadChan chan uploadChanEntry
 }
 
 func NewMSBot(token string, cache CachedMediaStorage) (*MSBot, error) {
@@ -32,7 +32,7 @@ func NewMSBot(token string, cache CachedMediaStorage) (*MSBot, error) {
 	mbot := &MSBot{
 		bot:        bot,
 		cache:      cache,
-		uploadChan: make(chan UploadEntry, uploadChanSize),
+		uploadChan: make(chan uploadChanEntry, uploadChanSize),
 	}
 	go mbot.startUploading()
 	return mbot, nil
@@ -150,22 +150,30 @@ func (b *MSBot) AnswerInlineQuery(ctx context.Context, inlineQueryID string, res
 	return nil
 }
 
+type uploadChanEntry struct {
+	key string
+	f   func() (UploadEntry, error)
+}
+
 func (b *MSBot) Upload(ctx context.Context, key string, forceUpload bool, getUpload func() (UploadEntry, error)) (res CachedMedia, err error) {
 	if cm, err := b.cache.Get(ctx, key); err == nil && !forceUpload {
 		return cm, nil
 	}
-
-	go func() {
-		upload, err := getUpload()
-		upload.key = key
-		if err != nil {
-			slog.Error("Can't get upload: %w", "err", err)
-			return
-		}
-		b.uploadChan <- upload
-	}()
-
 	ph := CachedMedia{FileID: uploadPlaceholderPhoto, Type: CMPhoto}
+	b.cache.Set(ctx, key, ph)
+
+	ue := uploadChanEntry{
+		key: key,
+		f:   getUpload,
+	}
+
+	select {
+	case b.uploadChan <- ue:
+	case <-time.Tick(20 * time.Millisecond):
+		//if queue is full just return ph
+		return ph, nil
+	}
+
 	return ph, nil
 }
 func (b *MSBot) DeleteMessage(ctx context.Context, chatID int64, msgID int) (err error) {
@@ -187,12 +195,14 @@ const (
 )
 
 func (b *MSBot) startUploading() {
-	//TODO add ratelimit
 	for ue := range b.uploadChan {
-
-		if ue.Body != nil {
+		upload, err := ue.f()
+		if err != nil {
+			slog.Error("Can't get upload body", "err", err)
+		}
+		if upload.Body != nil {
 			err := tgRetry(3, func() error {
-				return uploadBody(b, ue.key, ue.Name, *ue.Body)
+				return uploadBody(b, ue.key, upload.Name, *upload.Body)
 			})
 			if err != nil {
 				slog.Error("Can't upload body", "err", err)
@@ -201,7 +211,6 @@ func (b *MSBot) startUploading() {
 				}()
 			}
 		}
-		// time.Sleep(time.Second)
 	}
 }
 

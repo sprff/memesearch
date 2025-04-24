@@ -30,7 +30,6 @@ type CachedMediaStorage interface {
 }
 
 type UploadEntry struct {
-	key  string
 	Name string //filename without extension
 	Body *[]byte
 }
