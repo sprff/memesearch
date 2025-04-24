@@ -160,8 +160,8 @@ func (b *MSBot) Upload(ctx context.Context, key string, forceUpload bool, getUpl
 		return cm, nil
 	}
 	ph := CachedMedia{FileID: uploadPlaceholderPhoto, Type: CMPhoto}
-	b.cache.Set(ctx, key, ph)
 
+	//TODO it will be better to check if key is already in queue
 	ue := uploadChanEntry{
 		key: key,
 		f:   getUpload,

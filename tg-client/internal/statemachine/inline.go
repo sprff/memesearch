@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
-	"strings"
 	"tg-client/internal/telegram"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -23,15 +22,15 @@ func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 			// очень жаль
 		}
 	}
-	spl := strings.Split(q.Query, "!")
-	req := spl[0]
-	flags := "pv"
-	if len(spl) > 1 {
-		req = spl[1]
-		flags = spl[0]
+	req := q.Query
+	filter := telegram.CMPhoto
+	if len(req) > 0 && req[0] == '!' {
+		filter = telegram.CMVideo
+		req = req[1:]
+
 	}
 
-	memes, err := r.ApiClient.SearchMemes(ctx, (page - 1) * 10, 10, req)
+	memes, err := r.ApiClient.SearchMemes(ctx, (page-1)*10, 10, req)
 	if err != nil {
 		slog.ErrorContext(ctx, "Can't search", "err", err)
 		return
@@ -42,7 +41,7 @@ func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 	}
 	inlineResponse := []any{}
 	for _, meme := range memes {
-		entry, err := prepareMeme(meme.Meme, r, flags)
+		entry, err := prepareMeme(meme.Meme, r, filter)
 
 		if err != nil {
 			if err != ErrSkipped {
@@ -58,10 +57,8 @@ func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 
 var ErrSkipped = errors.New("skip")
 
-func prepareMeme(meme models.Meme, r RequestContext, flags string) (any, error) {
+func prepareMeme(meme models.Meme, r RequestContext, filter telegram.CachedMediaType) (any, error) {
 	ctx := r.Ctx
-	photos := strings.Contains(flags, "p")
-	videos := strings.Contains(flags, "v")
 
 	cm, err := r.Bot.Upload(ctx, string(meme.ID), false, func() (telegram.UploadEntry, error) {
 		media, err := r.ApiClient.GetMediaByID(ctx, models.MediaID(meme.ID))
@@ -73,17 +70,14 @@ func prepareMeme(meme models.Meme, r RequestContext, flags string) (any, error) 
 	if err != nil {
 		return nil, fmt.Errorf("can't get file id: %w", err)
 	}
+	if cm.Type != filter {
+		return nil, ErrSkipped
+	}
 	switch cm.Type {
-	case "photo":
-		if !photos {
-			return nil, ErrSkipped
-		}
+	case telegram.CMPhoto:
 		photo := tgbotapi.NewInlineQueryResultCachedPhoto(string(meme.ID), cm.FileID)
 		return photo, nil
-	case "video":
-		if !videos {
-			return nil, ErrSkipped
-		}
+	case telegram.CMVideo:
 		video := tgbotapi.NewInlineQueryResultCachedVideo(string(meme.ID), cm.FileID, " ")
 		video.Description = meme.Descriptions["general"]
 		return video, nil
