@@ -104,7 +104,7 @@ func isCommand(r RequestContext) bool {
 }
 
 func isAddPhoto(r RequestContext) bool {
-	if r.Event == nil || r.Event.Message == nil {
+	if r.Event == nil || r.Event.Message == nil || r.Event.Message.ViaBot != nil {
 		return false
 	}
 	msg := r.Event.Message
@@ -120,7 +120,7 @@ func isAddPhoto(r RequestContext) bool {
 }
 
 func isAddVideo(r RequestContext) bool {
-	if r.Event == nil || r.Event.Message == nil {
+	if r.Event == nil || r.Event.Message == nil || r.Event.Message.ViaBot != nil {
 		return false
 	}
 	msg := r.Event.Message
