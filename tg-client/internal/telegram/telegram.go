@@ -188,7 +188,7 @@ func (b *MSBot) DeleteMessage(ctx context.Context, chatID int64, msgID int) (err
 
 const (
 	uploadChat             int64 = -1002391398173
-	uploadChanSize               = 20
+	uploadChanSize               = 400
 	uploadRateLimit              = 1
 	uploadRateInterval           = 1 * time.Second
 	uploadPlaceholderPhoto       = "AgACAgIAAyEGAASOidcdAAOHaAlkN4uc9yN_v2ikFNWmbF-_JfYAAp74MRtYfEhIu5koMOS_BhsBAAMCAAN5AAM2BA" //TODO config it
@@ -206,9 +206,6 @@ func (b *MSBot) startUploading() {
 			})
 			if err != nil {
 				slog.Error("Can't upload body", "err", err)
-				go func() { // retry
-					b.uploadChan <- ue
-				}()
 			}
 		}
 	}
@@ -265,6 +262,7 @@ func uploadBody(b *MSBot, key string, name string, body []byte) error {
 
 		cm.FileID = sentMsg.Photo[len(sentMsg.Photo)-1].FileID
 		cm.Type = CMPhoto
+
 	default:
 		return fmt.Errorf("unexpected file format %s", contentType)
 	}
