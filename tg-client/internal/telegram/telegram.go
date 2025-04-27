@@ -134,6 +134,9 @@ func (b *MSBot) GetFile(ctx context.Context, message *tgbotapi.Message) (name st
 }
 
 func (b *MSBot) AnswerInlineQuery(ctx context.Context, inlineQueryID string, results []any, next_offset string) error {
+	if len(results) == 0 || next_offset == "" {
+		slog.InfoContext(ctx, "InlineQuery finished")
+	}
 	config := tgbotapi.InlineConfig{
 		InlineQueryID: inlineQueryID,
 		Results:       results,

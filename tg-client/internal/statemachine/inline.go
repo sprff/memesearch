@@ -30,7 +30,7 @@ func processInline(q *tgbotapi.InlineQuery, r RequestContext) {
 
 	}
 
-	memes, err := r.ApiClient.SearchMemes(ctx, (page-1)*10, 10, req)
+	memes, err := r.ApiClient.SearchMemes(ctx, (page-1)*50, 50, req)
 	if err != nil {
 		slog.ErrorContext(ctx, "Can't search", "err", err)
 		return

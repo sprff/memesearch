@@ -60,7 +60,7 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 			if len(args) < 1 {
 				return s, ErrBadCommandUsage
 			}
-			err := doCreateBoard(r, args[0])
+			err := doCreateBoard(r, strings.Join(args, " "))
 			return s, err
 		case "/listboards":
 			err := doListBoards(r)
@@ -80,7 +80,7 @@ func (s *CentralState) Process(r RequestContext) (State, error) {
 		case "/search":
 			text := strings.Join(args[:], " ")
 			mv := MediaViewState{page: 1, skip: true, getMedias: func(ctx context.Context, page, pageSize int) ([]models.ScoredMeme, error) {
-				return r.ApiClient.SearchMemes(ctx, (page - 1) * pageSize, pageSize, text)
+				return r.ApiClient.SearchMemes(ctx, (page-1)*pageSize, pageSize, text)
 			}}
 			return mv.Process(r)
 		default:
