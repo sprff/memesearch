@@ -6,10 +6,14 @@ RUN go mod download
 WORKDIR /app
 COPY tg-client/go.mod tg-client/go.sum /app/
 RUN go mod download
+RUN go get -tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
 
 
 COPY api-client/internal /api-client/internal
 COPY api-client/pkg /api-client/pkg
+WORKDIR /api-client
+RUN go generate ./...
+WORKDIR /app
 
 COPY tg-client/cmd/main /app/cmd/app
 COPY tg-client/internal /app/internal

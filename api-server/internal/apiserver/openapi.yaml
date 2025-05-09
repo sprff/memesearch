@@ -1,0 +1,807 @@
+openapi: 3.0.0
+info:
+  title: Meme Search API
+  description: API for searching meme
+  version: 1.0.0
+servers:
+  - url: http://localhost:1781
+    description: localhost
+
+paths:
+  /:
+    get:
+      tags:
+        - General
+      summary: Get API information
+      description: Returns general information about the API service
+      operationId: About
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiInfo'
+
+  /memes:
+    get:
+      tags:
+        - Memes
+      summary: Get paginated list of memes
+      description: Returns a paginated list of memes with optional filtering
+      operationId: ListMemes
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sortBy'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMemes'
+        '400':
+          description: Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Memes
+      summary: Create a new meme
+      description: Creates a new meme and returns its ID
+      operationId: PostMeme
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - board_id
+                - filename
+                - description
+              properties:
+                board_id:
+                  type: string
+                  example: "d290f1ee6c544b0190e6d701748f0851"
+                filename:
+                  type: string
+                  example: "file.mp4"
+                description:
+                  type: object
+      responses:
+        '200':
+          description: Meme created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meme'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /memes/{memeID}:
+    get:
+      tags:
+        - Memes
+      summary: Get meme by ID
+      description: Returns a single meme by its ID
+      operationId: GetMemeByID
+      parameters:
+        - $ref: '#/components/parameters/memeId'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meme'
+        '404':
+          description: Meme not found
+
+    put:
+      tags:
+        - Memes
+      summary: Update meme by ID
+      description: Updates an existing meme by its ID
+      operationId: UpdateMemeByID
+      parameters:
+        - $ref: '#/components/parameters/memeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                board_id:
+                  type: string
+                  example: "d290f1ee6c544b0190e6d701748f0851"
+                filename:
+                  type: string
+                  example: "file.mp4"
+                description:
+                  type: object
+      responses:
+        '200':
+          description: Meme updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meme'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Meme not found
+
+
+    delete:
+      tags:
+        - Memes
+      summary: Delete meme by ID
+      description: Deletes a meme by its ID
+      operationId: DeleteMemeByID
+      parameters:
+        - $ref: '#/components/parameters/memeId'
+      responses:
+        '200':
+          description: Meme deleted successfully
+          # TODO
+          # content:
+          #   application/json:
+          #     schema:
+          #       $ref: '#/components/schemas/Meme'
+        '404':
+          description: Meme not found
+
+  /media/{mediaID}:
+    put:
+      tags:
+        - Media
+      summary: Upload or update media file
+      description: Uploads or updates a media file (image/video) by ID
+      operationId: PutMediaByID
+      parameters:
+        - $ref: '#/components/parameters/mediaId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                media:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Media updated successfully
+        '400':
+          description: Invalid file format or size
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Media
+      summary: Get media file by ID
+      description: Gets a media file by its ID
+      operationId: GetMediaByID
+      parameters:
+        - $ref: '#/components/parameters/mediaId'
+      responses:
+        '200':
+          description: Success
+          content:
+            image/jpeg:
+              schema:
+                  type: string
+                  format: binary
+            image/jpg:
+              schema:
+                  type: string
+                  format: binary
+            image/png:
+              schema:
+                  type: string
+                  format: binary
+            video/mp4:
+              schema:
+                  type: string
+                  format: binary
+            application/octet-stream:
+              schema:
+                  type: string
+                  format: binary
+        '404':
+          description: Media not found
+
+  /search:
+    get:
+      tags:
+        - Search
+      summary: Search memes on fixed board
+      operationId: SearchMemes
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - in: query
+          name: general
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of memes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedScoredMemes'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Board not found
+
+  # /users:
+    # get:
+    #   tags:
+    #     - Users
+    #   summary: List all user
+    #   operationId: ListUsers
+    #   responses:
+    #     '200':
+    #       description: List of users
+    #       content:
+    #         application/json:
+    #           schema:
+    #             type: array
+    #             items:
+    #               $ref: '#/components/schemas/User'
+    #     '403':
+    #       description: Have no rights to see user list
+    #     '401':
+    #       description: Unauthorized
+
+  /users/{userID}:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      tags:
+        - Users
+      summary: Get user
+      operationId: GetUserByID
+      responses:
+        '200':
+          description: Requested user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+        '403':
+          description: Have no rights to see user
+        '401':
+          description: Unauthorized
+    # put:
+    #   parameters:
+    #     - $ref: '#/components/parameters/userId'
+    #   tags:
+    #     - Users
+    #   summary: Update user
+    #   operationId: UpdateUserByID
+    #   requestBody:
+    #     required: true
+    #     content:
+    #       application/json:
+    #         schema:
+    #           type: object
+    #           properties:
+    #             login:
+    #               type: string
+    #             password:
+    #               type: string
+    #   responses:
+    #     '200':
+    #       description: Updated user
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/User'
+    #     '404':
+    #       description: User not found
+    #     '403':
+    #       description: Have no rights to update user
+    #     '401':
+    #       description: Unauthorized
+    # delete:
+    #   parameters:
+    #     - $ref: '#/components/parameters/userId'
+    #   tags:
+    #     - Users
+    #   summary: Delete user
+    #   operationId: DeleteUserByID
+    #   responses:
+    #     '200':
+    #       description: User deleted
+    #     '404':
+    #       description: User not found
+    #     '403':
+    #       description: Have no rights to update user
+    #     '401':
+    #       description: Unauthorized
+
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Registers user
+      operationId: AuthRegister
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login user
+      operationId: AuthLogin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: User logined
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - token
+                properties:
+                  token:
+                    type: string
+        '404':
+          description: Wrong login or password
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/whoami:
+    post:
+      tags:
+        - Auth
+      summary: Get user by token
+      operationId: AuthWhoami
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Wrong token
+
+  /boards:
+    post:
+      tags:
+        - Board
+      summary: Create new board
+      operationId: PostBoard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+
+      responses:
+        '200':
+          description: Board created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '401':
+          description: Unauthorized
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Board
+      summary: Get available boards
+      operationId: ListBoards
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sortBy'
+      responses:
+        '200':
+          description: Boards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Board'
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to get board
+        '401':
+          description: Unauthorized
+
+  /boards/{boardID}:
+    get:
+      tags:
+        - Board
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Get board
+      operationId: GetBoardByID
+      responses:
+        '200':
+          description: Board
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to get board
+        '401':
+          description: Unauthorized
+    put:
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Update board
+      operationId: UpdateBoardByID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner:
+                  type: string
+                name:
+                  type: string
+      responses:
+        '200':
+          description: New board
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to update board
+        '401':
+          description: Unauthorized
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Delete board
+      operationId: DeleteBoardByID
+      responses:
+        '200':
+          description: Deleted board
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to delete board
+        '401':
+          description: Unauthorized
+
+  /subscribe/{boardID}:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Update board
+      operationId: SubscribeByBoardID
+      responses:
+        '200':
+          description: Subscribed
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to subscribe
+        '401':
+          description: Unauthorized
+
+  /unsubscribe/{boardID}:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/boardId'
+      summary: Update board
+      operationId: UnsubscribeByBoardID
+      responses:
+        '200':
+          description: Unsubscribed
+        '404':
+          description: NotFound
+        '403':
+          description: Don't have rights to subscribe
+        '401':
+          description: Unauthorized
+
+components:
+  schemas:
+    Meme:
+      type: object
+      required:
+        - id
+        - board_id
+        - filename
+        - description
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          example: "d290f1ee6c544b0190e6d701748f0851"
+        board_id:
+          type: string
+          example: "d290f1ee6c544b0190e6d701748f0851"
+        filename:
+          type: string
+          example: "file.mp4"
+        description:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      required:
+        - id
+        - login
+      properties:
+        id:
+          type: string
+          example: "user_id"
+        login:
+          type: string
+          example: "user_login"
+
+    Board:
+      type: object
+      required:
+        - id
+        - owner
+        - name
+      properties:
+        id:
+          type: string
+        owner:
+          type: string
+        name:
+          type: string
+
+    ScoredMeme:
+      type: object
+      required:
+        - score
+        - meme
+      properties:
+        score:
+          type: number
+          format: double
+        meme:
+          $ref: '#/components/schemas/Meme'
+
+    Error:
+      type: object
+      required:
+        - id
+        - message
+      properties:
+        id:
+          type: string
+          example: "SOME_ID"
+        message:
+          type: string
+          example: "Human readable error"
+        body:
+          type: object
+
+
+    PaginatedMemes:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Meme'
+
+    PaginatedScoredMemes:
+      type: object
+      required:
+        - items
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoredMeme'
+
+    UserCreate:
+      type: object
+      properties:
+        login:
+          type: string
+          example: "login"
+    UserUpdate:
+      type: object
+      properties:
+        login:
+          type: string
+          example: "new_login"
+
+    ApiInfo:
+      type: object
+      required:
+        - apiName
+        - version
+        - description
+      properties:
+        apiName:
+          type: string
+          example: Meme Search API
+        version:
+          type: string
+          example: 1.0.0
+        description:
+          type: string
+          example: API for managing internet memes and related media
+
+  parameters:
+    offset:
+      name: offset
+      in: query
+      description: Offset
+      required: false
+      schema:
+        type: integer
+        default: 0
+
+    limit:
+      name: limit
+      in: query
+      description: Limit
+      required: false
+      schema:
+        type: integer
+        default: 20
+
+    sortBy:
+      name: sortBy
+      in: query
+      description: Field to sort by
+      required: false
+      schema:
+        type: string
+        enum: [id, createdAt, updatedAt]
+        default: createdAt
+
+    memeId:
+      name: memeID
+      in: path
+      description: ID of the meme
+      required: false
+      schema:
+        type: string
+
+    mediaId:
+      name: mediaID
+      in: path
+      description: ID of the media file
+      required: true
+      schema:
+        type: string
+
+    boardId:
+      name: boardID
+      in: path
+      description: ID of the board
+      required: true
+      schema:
+        type: string
+
+    userId:
+      name: userID
+      in: path
+      description: ID of the user
+      required: true
+      schema:
+        type: string

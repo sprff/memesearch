@@ -2,8 +2,10 @@ FROM golang:1.24.0-alpine3.20 AS builder
 WORKDIR /app
 COPY go.mod go.sum /app/
 RUN go mod download
+RUN go get -tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
 COPY cmd/apiserver ./cmd/app
 COPY internal ./internal
+RUN go generate ./...
 
 ENV GOCACHE=/root/.cache/go-build
 RUN --mount=type=cache,target="/root/.cache/go-build" go build -o /app/bin/app ./cmd/app
