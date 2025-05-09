@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -28,6 +29,22 @@ func main() {
 		log.Fatalf("Failed to create bot: %v", err)
 	}
 
+	bot.Upload(context.Background(), "placeholder", true, func() (telegram.UploadEntry, error) {
+		file, err := os.Open(fmt.Sprintf("%s/placeholder.png", path))
+		if err != nil {
+			return telegram.UploadEntry{}, fmt.Errorf("can't open: %w", err)
+		}
+
+		body, err := io.ReadAll(file)
+		if err != nil {
+			return telegram.UploadEntry{}, fmt.Errorf("can't read: %w", err)
+		}
+
+		return telegram.UploadEntry{Name: "placeholder", Body: &body}, nil
+
+	})
+
+	slog.Info("Bot started")
 	state, err := statemachine.New(bot, url, os.Getenv("MS_DATA_FOLDER"))
 	if err != nil {
 		log.Fatalf("Failed to create statemachine: %v", err)

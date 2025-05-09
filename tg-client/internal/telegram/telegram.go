@@ -29,6 +29,10 @@ func NewMSBot(token string, cache CachedMediaStorage) (*MSBot, error) {
 		return nil, err
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
 	mbot := &MSBot{
 		bot:        bot,
 		cache:      cache,
@@ -162,8 +166,8 @@ func (b *MSBot) Upload(ctx context.Context, key string, forceUpload bool, getUpl
 	if cm, err := b.cache.Get(ctx, key); err == nil && !forceUpload {
 		return cm, nil
 	}
-	ph := CachedMedia{FileID: uploadPlaceholderPhoto, Type: CMPhoto}
 
+	ph, _ := b.cache.Get(ctx, "placeholder")
 	//TODO it will be better to check if key is already in queue
 	ue := uploadChanEntry{
 		key: key,
@@ -190,11 +194,10 @@ func (b *MSBot) DeleteMessage(ctx context.Context, chatID int64, msgID int) (err
 }
 
 const (
-	uploadChat             int64 = -1002391398173
-	uploadChanSize               = 400
-	uploadRateLimit              = 1
-	uploadRateInterval           = 1 * time.Second
-	uploadPlaceholderPhoto       = "AgACAgIAAyEGAASOidcdAAOHaAlkN4uc9yN_v2ikFNWmbF-_JfYAAp74MRtYfEhIu5koMOS_BhsBAAMCAAN5AAM2BA" //TODO config it
+	uploadChat         int64 = -1002391398173
+	uploadChanSize           = 400
+	uploadRateLimit          = 1
+	uploadRateInterval       = 1 * time.Second
 )
 
 func (b *MSBot) startUploading() {
