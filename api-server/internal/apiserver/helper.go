@@ -38,7 +38,7 @@ func convertMemeToServer(m models.Meme) Meme {
 
 func convertScoredMemeToServer(m searchranker.ScroredMeme) ScoredMeme {
 	return ScoredMeme{
-		Score: m.Score,
+		Score: float64(int(m.Score*100)) / 100,
 		Meme:  convertMemeToServer(m.Meme),
 	}
 }

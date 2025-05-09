@@ -49,7 +49,7 @@ func (a *api) Search(ctx context.Context, req map[string]string, offset, limit i
 		memes = append(memes, nmemes...)
 	}
 
-	res, err := a.ranker.Rank(memes, req)
+	res, err := a.ranker.Rank(ctx, memes, req)
 	begin := min(offset, len(res))
 	end := min(offset+limit, len(res))
 
